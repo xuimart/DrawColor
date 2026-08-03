@@ -595,6 +595,26 @@ body {
 .menu-btn[aria-expanded="true"] { color: var(--text); background: var(--bg-raised-hi); }
 .menu-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
+/* Badge de atualização disponível */
+.update-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent, #e63946);
+  color: white;
+  font-size: 11px;
+  text-decoration: none;
+  animation: pulse-update 2s ease-in-out infinite;
+}
+.update-badge[hidden] { display: none; }
+@keyframes pulse-update {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 .panel-menu {
   position: absolute;
   top: 24px; right: 0;

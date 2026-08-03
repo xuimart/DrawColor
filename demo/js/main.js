@@ -5,6 +5,9 @@
 (function () {
   'use strict';
 
+  /** Versão local do plugin — atualizada a cada release. */
+  const DRAWCOLOR_VERSION = '1.0.0';
+
   const C = window.Color;
   const S = window.AppState;
   const W = window.Wheel;
@@ -760,6 +763,61 @@
     // Ponte com a outra janela da extensão (janela Modeless do CEP).
     // Fora do CEP também é no-op.
     if (window.PanelSync) window.PanelSync.init();
+
+    // Verifica se há atualização disponível no GitHub (uma vez por sessão).
+    checkForUpdate();
+  }
+
+  /* ---------------- Verificação de atualização ---------------- */
+
+  /**
+   * Compara duas strings de versão semver (ex: "1.2.3").
+   * Retorna true se `remote` é mais nova que `local`.
+   */
+  function isNewerVersion(remote, local) {
+    var rParts = remote.replace(/^v/, '').split('.').map(Number);
+    var lParts = local.replace(/^v/, '').split('.').map(Number);
+    for (var i = 0; i < 3; i++) {
+      var r = rParts[i] || 0;
+      var l = lParts[i] || 0;
+      if (r > l) return true;
+      if (r < l) return false;
+    }
+    return false;
+  }
+
+  /**
+   * Checa a última release no GitHub e mostra badge se há versão nova.
+   * Roda uma vez por sessão (sessionStorage) e falha silenciosamente.
+   */
+  function checkForUpdate() {
+    try {
+      // Só checa uma vez por sessão
+      if (sessionStorage.getItem('drawcolor-update-checked')) return;
+
+      fetch('https://api.github.com/repos/xuimart/DrawColor/releases/latest', {
+        cache: 'no-store'
+      })
+        .then(function (res) {
+          if (!res.ok) return;
+          return res.json();
+        })
+        .then(function (data) {
+          if (!data || !data.tag_name) return;
+
+          if (isNewerVersion(data.tag_name, DRAWCOLOR_VERSION)) {
+            var badge = document.getElementById('updateBadge');
+            if (badge) badge.hidden = false;
+          }
+
+          sessionStorage.setItem('drawcolor-update-checked', '1');
+        })
+        .catch(function () {
+          // Sem internet ou rate limit — ignora silenciosamente
+        });
+    } catch (e) {
+      // Ambiente sem fetch ou sessionStorage — ignora
+    }
   }
 
   /**
