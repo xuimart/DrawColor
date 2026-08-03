@@ -1,0 +1,16 @@
+{
+  "name": "drawcolor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DrawColor Color Wheel — núcleo compartilhado, shell UXP (Photoshop 22+) e shell CEP (Photoshop 21-25)",
+  "scripts": {
+    "build": "node build/build.js",
+    "build:uxp": "node build/build.js uxp",
+    "build:cep": "node build/build.js cep",
+    "test": "node --test tests/layout.test.js tests/snap.test.js tests/layout-store.test.js tests/layout-serializer.test.js tests/layout-editor.test.js tests/platform-uxp.test.js tests/platform-env.test.js tests/platform-cep.test.js tests/panel-sync.test.js tests/slider-channels.test.js tests/lab.test.js tests/lab-channel-independence.test.js tests/harmony.test.js tests/mixer-history.test.js tests/gamut-mask.test.js tests/gamut-mask-vertex-editing.test.js",
+    "install:cep": "powershell -ExecutionPolicy Bypass -File cep/install-cep.ps1",
+    "uninstall:cep": "powershell -ExecutionPolicy Bypass -File cep/install-cep.ps1 -Uninstall",
+    "deploy:cep": "node build/build.js cep && powershell -ExecutionPolicy Bypass -File cep/install-cep.ps1",
+    "demo": "node -e \"require('child_process').exec('start \\\"\\\" \\\"demo/index.html\\\"')\""
+  }
+}

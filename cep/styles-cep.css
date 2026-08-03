@@ -1,0 +1,114 @@
+/**
+ * styles-cep.css — Ajustes do shell CEP.
+ *
+ * O CEP roda em Chromium completo dentro do Photoshop. O painel ocupa
+ * todo o espaço dado pelo host e não pode ser redimensionado pelo usuário
+ * (quem controla é o dock do PS). O conteúdo se adapta ao viewport.
+ */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/**
+ * Sem rolagem: o conteúdo cabe sempre, porque a roda encolhe junto.
+ *
+ * Houve aqui um `overflow-y: auto` com `min-height` no painel, para a faixa de
+ * baixo nunca cobrir a roda. Resolvia a sobreposição criando outro problema:
+ * barra de rolagem no painel e impossibilidade de encolher. Quem garante que
+ * cabe agora é a escala, que não tem piso alto — a interface toda diminui.
+ */
+.demo-shell {
+  max-width: none;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* O painel preenche o viewport inteiro do CEP. A altura vem do PS. */
+.panel {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* No CEP o botão de detach funciona — abre janela flutuante dentro do painel */
+
+/* ==================================================================== */
+/* JANELA MODELESS ("DrawColor Tools")                                  */
+/*                                                                      */
+/* Mesma página do painel, marcada com .shell-tools pelo build. Aqui a  */
+/* roda e o cabeçalho saem de cena e a faixa de abas passa a ocupar a   */
+/* janela inteira: quem abre esta janela quer os controles soltos, a    */
+/* roda continua no painel ancorado.                                    */
+/*                                                                      */
+/* As regras do painel ancoram abas, corpo e status no rodapé. Nesta    */
+/* janela isso é desfeito: as abas voltam para o topo e o corpo estica. */
+/* ==================================================================== */
+
+.shell-tools .panel-header,
+.shell-tools .top-row,
+.shell-tools .wheel-stage,
+.shell-tools .value-bar {
+  display: none !important;
+}
+
+/* O painel vira uma coluna simples: abas, corpo, status. */
+.shell-tools .panel {
+  display: flex;
+  flex-direction: column;
+  background-image: none;   /* remove os divisores desenhados no fundo */
+}
+
+.shell-tools .panel .tabs {
+  position: static;
+  top: auto;
+  bottom: auto;
+  flex: 0 0 auto;
+}
+
+.shell-tools .panel .tab-body {
+  position: relative;
+  top: auto;
+  bottom: auto;
+  left: auto;
+  right: auto;
+  height: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.shell-tools .panel .status-bar {
+  position: static;
+  bottom: auto;
+  flex: 0 0 auto;
+}
+
+/* Dentro da janela de ferramentas não faz sentido destacar de novo. */
+.shell-tools .detach-btn { display: none; }
+
+/* Sem a roda, os sliders ganham a altura toda da janela. */
+.shell-tools .panel #paneSliders { height: 100%; }
+
+/**
+ * A linha de modo fica logo abaixo dos sliders, não no fim da janela.
+ *
+ * No painel a faixa mede exatamente o conteúdo, então `margin-top: auto` na
+ * linha de modo não abre vão nenhum. Aqui a janela é redimensionável e o corpo
+ * estica, então o `auto` empurrava MODE para o rodapé e deixava um buraco entre
+ * o último slider e ele. Com o gap fixo a sobra vai toda para baixo de MODE.
+ */
+.shell-tools .panel .mode-row { margin-top: var(--mode-gap); }
+
+/* Na janela de ferramentas o pane só aparece quando é a aba ativa, como no
+   painel: o `display` continua atrelado a .is-active. */
+.shell-tools .panel #paneSliders.is-active { display: flex; }
+.shell-tools .panel #paneGode.is-active { display: flex; }

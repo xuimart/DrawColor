@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Color Wheel Plugin — Design Demo</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="demo-shell">
+  <p class="demo-note">Demo de design — Color Wheel Plugin (Photoshop UXP). Interativo, roda em navegador.</p>
+
+  <div class="panel" id="panel">
+
+    <!-- ================= CABEÇALHO / MENU ================= -->
+    <div class="panel-header">
+      <span class="panel-title">Color Wheel</span>
+      <a href="https://www.xuimart.com.br" target="_blank" rel="noopener"
+         id="xuimartLogo" class="xuimart-header-logo-link">
+        <img src="img/logo_xuimart_branca.png" alt="Xuimart" class="xuimart-header-logo">
+      </a>
+      <button class="menu-btn" id="menuBtn" aria-haspopup="true" aria-expanded="false"
+              aria-controls="panelMenu" aria-label="Opções do painel">☰</button>
+
+      <div class="panel-menu" id="panelMenu" role="menu" hidden>
+        <p class="menu-group">Roda</p>
+        <div class="menu-row" role="group" aria-label="Rotação da roda">
+          <span class="menu-label">Rotação</span>
+          <button type="button" id="rotMinus" class="rot-btn" aria-label="Girar 15° à esquerda">−</button>
+          <output id="rotValue" class="rotate-value">0°</output>
+          <button type="button" id="rotPlus" class="rot-btn" aria-label="Girar 15° à direita">+</button>
+          <button type="button" id="rotReset" class="rot-btn wide">Zerar</button>
+        </div>
+        <p class="menu-hint">Shift + arraste no anel gira · Ctrl trava em 60°</p>
+
+        <hr class="menu-sep">
+
+        <label class="menu-check">
+          <input type="checkbox" id="limitEnabled">
+          <span>Limitar cores</span>
+        </label>
+        <div class="menu-sub" id="limitControls">
+          <div class="menu-row">
+            <span class="menu-label">Matizes</span>
+            <select id="limitHueSteps" aria-label="Quantidade de matizes"></select>
+          </div>
+          <div class="menu-row">
+            <span class="menu-label">Tons</span>
+            <select id="limitSvSteps" aria-label="Quantidade de níveis de saturação e valor"></select>
+          </div>
+          <p class="menu-hint" id="limitCount"></p>
+        </div>
+
+        <hr class="menu-sep">
+
+        <label class="menu-check">
+          <input type="checkbox" id="optShowHex" checked>
+          <span>Mostrar campo Hex</span>
+        </label>
+        <label class="menu-check">
+          <input type="checkbox" id="optCompare" checked>
+          <span>Comparar cor nova/antiga</span>
+        </label>
+        <label class="menu-check">
+          <input type="checkbox" id="optLumLock">
+          <span>Travar luminosidade</span>
+        </label>
+        <label class="menu-check">
+          <input type="checkbox" id="optValueCheck">
+          <span>Conferir valores (cinza)</span>
+        </label>
+
+        <hr class="menu-sep">
+
+        <p class="menu-group">Harmonia</p>
+        <p class="menu-hint" id="harmonyOffsets">—</p>
+        <div class="menu-row">
+          <button type="button" id="harmonyReset" class="rot-btn wide">Restaurar ângulos</button>
+        </div>
+        <p class="menu-hint">
+          Arraste um marcador secundário para abrir ou fechar o esquema inteiro ·
+          Alt move só aquele braço · Shift trava em 15°
+        </p>
+
+        <hr class="menu-sep">
+
+        <p class="menu-group">Máscara de gamut</p>
+        <label class="menu-check">
+          <input type="checkbox" id="optGamutMask">
+          <span>Ativar máscara</span>
+        </label>
+        <label class="menu-check">
+          <input type="checkbox" id="optGamutEdit">
+          <span>Editar máscara</span>
+        </label>
+        <label class="menu-check">
+          <input type="checkbox" id="optGamutLock">
+          <span>Gamut lock</span>
+        </label>
+        <p class="menu-group">Formato</p>
+        <div class="mask-rack" id="maskRack" role="radiogroup" aria-label="Formato da máscara"></div>
+
+        <div class="menu-row">
+          <span class="menu-label">Tamanho</span>
+          <select id="gamutPreset" aria-label="Predefinição de tamanho">
+            <option value="">Predefinições…</option>
+            <option value="wide">Ampla</option>
+            <option value="narrow">Estreita</option>
+            <option value="band">Faixa fina</option>
+            <option value="muted">Dessaturada</option>
+            <option value="full">Disco inteiro</option>
+          </select>
+        </div>
+        <div class="menu-row">
+          <button type="button" id="gamutReset" class="rot-btn wide">Restaurar máscara</button>
+          <button type="button" id="gamutResetShape" class="rot-btn wide"
+                  title="Volta ao formato do rack, mantendo posição e tamanho">Restaurar forma</button>
+        </div>
+        <p class="menu-hint">
+          Em edição, arraste os vértices brancos para moldar a máscara ·
+          as alças da caixa mudam tamanho · a alça de cima gira
+        </p>
+        <p class="menu-hint">
+          A máscara age no seletor em disco. Em edição, arraste em qualquer lugar
+          para mover · alças laranja mudam um eixo · Shift mantém a proporção ·
+          Alt+arraste move sem entrar em edição.
+        </p>
+      </div>
+    </div>
+
+    <!-- ================= TOPO ================= -->
+    <div class="top-row">
+      <div class="swatch-stack">
+        <button class="fg-swatch" id="fgSwatch" data-layout="swatch.fg" aria-label="Cor de foreground">
+          <span class="fg-prev" id="fgPrev" aria-hidden="true"></span>
+        </button>
+        <button class="bg-swatch" id="bgSwatch" data-layout="swatch.bg" aria-label="Cor de background"></button>
+        <button class="swap-btn" id="swapBtn" data-layout="swatch.swap" title="Trocar foreground/background" aria-label="Trocar foreground e background">⇄</button>
+      </div>
+
+    </div>
+
+    <!-- ================= RODA (tudo posicionado em torno do canvas) ================= -->
+    <div class="wheel-stage">
+      <canvas id="wheel" width="426" height="426" aria-label="Roda de cores HSV"></canvas>
+
+      <!-- Harmonias/formatos: arco superior direito -->
+      <div class="arc" id="iconArc" role="radiogroup" aria-label="Esquema de harmonia"></div>
+
+      <!-- Satélites inferior direito: forma, gamut -->
+      <div class="arc" id="wheelSatellites">
+        <!--
+          Máscara de gamut e suas ferramentas. As ferramentas ficam num popout
+          ancorado no botão, e não em âncoras próprias no arco: entre
+          harmony.6 e sat.gamutmask não cabem três botões sem sobreposição.
+        -->
+        <div class="popout" id="gamutPop" data-layout="sat.gamutmask">
+          <button class="sat-btn" id="gamutMaskBtn" aria-pressed="false"
+                  title="Máscara de gamut" aria-label="Máscara de gamut">
+            <canvas width="22" height="22" aria-hidden="true"></canvas>
+          </button>
+
+          <div class="popout-menu gamut-only" id="gamutTools" role="group"
+               aria-label="Ferramentas da máscara" hidden>
+            <button class="sat-btn" id="gamutEditBtn" aria-pressed="false"
+                    title="Editar máscara" aria-label="Editar máscara">
+              <canvas width="22" height="22" aria-hidden="true"></canvas>
+            </button>
+            <button class="sat-btn" id="gamutLockBtn" aria-pressed="false"
+                    title="Gamut lock" aria-label="Gamut lock">
+              <canvas width="22" height="22" aria-hidden="true"></canvas>
+            </button>
+            <button class="sat-btn" id="gamutResetBtn"
+                    title="Restaurar máscara" aria-label="Restaurar máscara">
+              <canvas width="22" height="22" aria-hidden="true"></canvas>
+            </button>
+          </div>
+        </div>
+        <div class="popout" id="shapePop" data-layout="sat.shape">
+          <button class="sat-btn" id="shapePopBtn" aria-haspopup="true" aria-expanded="false"
+                  aria-controls="shapeMenu" title="Forma do seletor">
+            <canvas width="22" height="22" aria-hidden="true"></canvas>
+          </button>
+          <div class="popout-menu" id="shapeMenu" role="radiogroup"
+               aria-label="Forma do seletor" hidden>
+            <button class="sat-btn shape-btn is-active" data-shape="triangle" role="radio"
+                    aria-checked="true" title="Triângulo">
+              <canvas width="22" height="22" aria-hidden="true"></canvas>
+            </button>
+            <button class="sat-btn shape-btn" data-shape="square" role="radio"
+                    aria-checked="false" title="Quadrado">
+              <canvas width="22" height="22" aria-hidden="true"></canvas>
+            </button>
+            <button class="sat-btn shape-btn" data-shape="disc" role="radio"
+                    aria-checked="false" title="Disco">
+              <canvas width="22" height="22" aria-hidden="true"></canvas>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trilho esquerdo: conferência, solzinho, dials -->
+      <div class="arc" id="leftRail">
+        <button class="sat-btn js-valuecheck" data-layout="rail.valuecheck" aria-pressed="false"
+                title="Conferir valores" aria-label="Conferir valores em escala de cinza">
+          <canvas width="22" height="22" aria-hidden="true"></canvas>
+        </button>
+        <button class="sat-btn js-lumlock" data-layout="rail.lumlock" aria-pressed="false"
+                title="Travar luminosidade" aria-label="Travar luminosidade">
+          <canvas width="22" height="22" aria-hidden="true"></canvas>
+        </button>
+        <div class="dial-wrap" data-layout="rail.dial.brightness">
+          <canvas class="dial" id="dialBright" width="44" height="44"
+                  role="slider" tabindex="0" aria-label="Brilho"
+                  aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></canvas>
+          <span class="dial-label">B <b id="dialBrightVal">0</b></span>
+        </div>
+        <div class="dial-wrap" data-layout="rail.dial.temperature">
+          <canvas class="dial" id="dialTemp" width="44" height="44"
+                  role="slider" tabindex="0" aria-label="Temperatura"
+                  aria-valuemin="-60" aria-valuemax="60" aria-valuenow="0"></canvas>
+          <span class="dial-label">T <b id="dialTempVal">0°</b></span>
+        </div>
+
+      </div>
+
+      <!-- Undo/redo: canto inferior esquerdo -->
+      <div class="arc" id="historyRail">
+        <button class="sat-btn" id="undoBtn" data-layout="history.undo" title="Desfazer cor" aria-label="Desfazer cor">←</button>
+        <button class="sat-btn" id="redoBtn" data-layout="history.redo" title="Refazer cor" aria-label="Refazer cor">→</button>
+      </div>
+
+      <!-- Hex: canto inferior direito da roda -->
+      <div class="hex-row" id="hexRow" data-layout="hex.field">
+        <span class="hex-hash">#</span>
+        <input type="text" id="hexInput" maxlength="7" spellcheck="false" aria-label="Valor hexadecimal da cor">
+      </div>
+    </div>
+
+    <!-- Barra de valor: o disco controla matiz e saturação, o valor vem daqui -->
+    <div class="value-bar" id="valueBar" hidden>
+      <div class="value-track" id="valueTrack" role="slider" tabindex="0"
+           aria-label="Valor" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <canvas id="valueCanvas" width="256" height="1"></canvas>
+        <div class="value-thumb" id="valueThumb"></div>
+      </div>
+    </div>
+
+    <!-- ================= TABS ================= -->
+    <div class="tabs" role="tablist">
+      <button class="tab is-active" id="tabSliders" role="tab" aria-selected="true" aria-controls="paneSliders">Sliders</button>
+      <button class="tab" id="tabMixers" role="tab" aria-selected="false" aria-controls="paneMixers">Mixers</button>
+      <button class="tab" id="tabPalettes" role="tab" aria-selected="false" aria-controls="panePalettes">Paletas</button>
+      <button class="tab" id="tabGode" role="tab" aria-selected="false" aria-controls="paneGode">Godê</button>
+
+      <button class="detach-btn" id="detachBtn" title="Separar em janela"
+              aria-label="Separar a aba atual em janela">⤢</button>
+    </div>
+
+    <div class="tab-body">
+      <!-- Sliders -->
+      <section class="pane is-active" id="paneSliders" role="tabpanel" aria-labelledby="tabSliders">
+        <div class="slider-list" id="sliderList"></div>
+
+        <!-- Rampa de valores do modo B/W -->
+        <div class="bw-block" id="bwBlock" hidden>
+          <div class="bw-row">
+            <div class="bw-ramp" id="bwRamp" role="group" aria-label="Rampa de valores"></div>
+            <div class="bw-stepper">
+              <button type="button" id="bwMinus" aria-label="Menos valores">−</button>
+              <button type="button" id="bwPlus" aria-label="Mais valores">+</button>
+            </div>
+          </div>
+          <span class="bw-count"><b id="bwCount">7</b> valores</span>
+        </div>
+
+        <div class="mode-row">
+          <span class="mode-caption">MODE:</span>
+          <div class="mode-btns" id="modeBtns" role="radiogroup" aria-label="Modo de cor"></div>
+
+          <div class="tool-group mode-toggles">
+            <button class="tool-btn js-lumlock" aria-pressed="false"
+                    title="Travar luminosidade" aria-label="Travar luminosidade">
+              <canvas width="18" height="18" aria-hidden="true"></canvas>
+            </button>
+            <button class="tool-btn js-valuecheck" aria-pressed="false"
+                    title="Conferir valores em escala de cinza"
+                    aria-label="Conferir valores em escala de cinza">
+              <canvas width="18" height="18" aria-hidden="true"></canvas>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Mixers -->
+      <section class="pane" id="paneMixers" role="tabpanel" aria-labelledby="tabMixers">
+
+        <!-- Color History -->
+        <div class="mix-strip" id="stripHistory" data-strip="history">
+          <div class="mix-strip-head">
+            <span class="mix-strip-title">Color history</span>
+          </div>
+          <div class="mix-strip-bar" id="historyBar"></div>
+        </div>
+
+        <!-- Blender -->
+        <div class="mix-strip" id="stripBlender" data-strip="blender">
+          <div class="mix-strip-head">
+            <span class="mix-strip-title">Blender</span>
+            <select class="mix-strip-mode" id="blenderMode" aria-label="Modo do blender">
+              <option value="saturation">Saturação</option>
+              <option value="brightness">Brilho</option>
+              <option value="temperature">Temperatura</option>
+            </select>
+            <label class="mix-strip-auto"><input type="checkbox" id="blenderAuto"> Auto Sample</label>
+          </div>
+          <div class="mix-strip-track" id="blenderTrack">
+            <canvas class="mix-strip-canvas" id="blenderCanvas" height="28"></canvas>
+            <div class="mix-strip-thumb" id="blenderThumb"></div>
+          </div>
+        </div>
+
+        <!-- Shades & Tones -->
+        <div class="mix-strip" id="stripShades" data-strip="shades">
+          <div class="mix-strip-head">
+            <span class="mix-strip-title">Shades & tones</span>
+            <select class="mix-strip-mode" id="shadesMode" aria-label="Modo de tons">
+              <option value="shades">Shades</option>
+              <option value="tints">Tints</option>
+              <option value="tones">Tones</option>
+            </select>
+            <label class="mix-strip-auto"><input type="checkbox" id="shadesAuto"> Auto Sample</label>
+          </div>
+          <div class="mix-strip-track" id="shadesTrack">
+            <canvas class="mix-strip-canvas" id="shadesCanvas" height="28"></canvas>
+            <div class="mix-strip-thumb" id="shadesThumb"></div>
+          </div>
+        </div>
+
+        <!-- Swatches (espelho compacto da paleta) -->
+        <div class="mix-strip" id="stripSwatches" data-strip="swatches">
+          <div class="mix-strip-head">
+            <span class="mix-strip-title">Swatches</span>
+          </div>
+          <div class="mix-strip-bar mix-strip-swatches" id="swatchesBar"></div>
+        </div>
+
+        <!-- Scheme (harmonia como gradiente) -->
+        <div class="mix-strip" id="stripScheme" data-strip="scheme">
+          <div class="mix-strip-head">
+            <span class="mix-strip-title">Scheme</span>
+            <select class="mix-strip-mode" id="schemeMode" aria-label="Esquema de harmonia">
+              <option value="complementary">Complementar</option>
+              <option value="analogous">Análogo</option>
+              <option value="triadic">Triádico</option>
+              <option value="split">Split-complementar</option>
+              <option value="tetradic">Tetrádico</option>
+            </select>
+            <label class="mix-strip-auto"><input type="checkbox" id="schemeAuto"> Auto Sample</label>
+          </div>
+          <div class="mix-strip-track" id="schemeTrack">
+            <canvas class="mix-strip-canvas" id="schemeCanvas" height="28"></canvas>
+            <div class="mix-strip-thumb" id="schemeThumb"></div>
+          </div>
+        </div>
+
+        <!-- Rodapé: toggles de visibilidade + importar/exportar -->
+        <div class="mix-strip-footer">
+          <div class="mix-strip-toggles" id="stripToggles" role="group" aria-label="Visibilidade das barras">
+            <button class="mix-dot is-active" data-target="history" title="Color history" aria-pressed="true"></button>
+            <button class="mix-dot is-active" data-target="blender" title="Blender" aria-pressed="true"></button>
+            <button class="mix-dot is-active" data-target="shades" title="Shades & tones" aria-pressed="true"></button>
+            <button class="mix-dot is-active" data-target="swatches" title="Swatches" aria-pressed="true"></button>
+            <button class="mix-dot is-active" data-target="scheme" title="Scheme" aria-pressed="true"></button>
+          </div>
+          <div class="mix-strip-actions">
+            <button class="pal-btn" id="mixExport" title="Exportar barras">⬇</button>
+            <button class="pal-btn" id="mixImport" title="Importar barras">⬆</button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Paletas -->
+      <section class="pane" id="panePalettes" role="tabpanel" aria-labelledby="tabPalettes">
+        <div class="palette-head">
+          <select id="paletteSelect" aria-label="Paleta ativa"></select>
+          <button type="button" id="paletteAdd" class="pal-btn primary" title="Guardar a cor atual">+</button>
+          <button type="button" id="paletteNew" class="pal-btn" title="Nova paleta">Nova</button>
+          <button type="button" id="paletteDelete" class="pal-btn" title="Remover a paleta ativa">Excluir</button>
+        </div>
+
+        <input type="text" id="paletteName" class="palette-name" maxlength="40" aria-label="Nome da paleta">
+
+        <div class="palette-grid" id="paletteGrid"></div>
+
+        <div class="palette-actions">
+          <button type="button" id="paletteFromLimit" class="pal-btn">Importar do limite</button>
+          <button type="button" id="paletteFromBw" class="pal-btn">Importar rampa B/W</button>
+          <button type="button" id="paletteExportBtn" class="pal-btn">Exportar</button>
+        </div>
+
+        <textarea id="paletteExport" class="palette-export" rows="4" hidden
+                  aria-label="Cores da paleta em texto"></textarea>
+        <p class="palette-status" id="paletteStatus"></p>
+      </section>
+
+      <!-- Godê -->
+      <section class="pane" id="paneGode" role="tabpanel" aria-labelledby="tabGode">
+        <!--
+          Ícones em SVG inline, no padrão Xuimart: viewBox 0 0 24 24,
+          stroke-width 2, `currentColor` para herdar a cor do estado do botão.
+          O rótulo sai do texto e vai para `title` e `aria-label` — o nome
+          continua acessível a leitor de tela e a quem passa o mouse.
+        -->
+        <div class="gode-tools" role="radiogroup" aria-label="Ferramenta do godê">
+          <button type="button" class="gode-tool is-active" data-tool="brush" role="radio"
+                  aria-checked="true" title="Pincel" aria-label="Pincel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <!-- Pincel: cerdas largas embaixo, cabo fino em diagonal -->
+              <path d="M3 21c0-2 1.5-3 3-4s2.5-2.5 2.5-4L13 8.5"/>
+              <path d="M9.5 12l3-3 6.5-6.5a1.5 1.5 0 0 1 2 2L14.5 11l-3 3"/>
+              <path d="M3 21c2 0 3.5-.5 4.5-1.5"/>
+            </svg>
+          </button>
+          <button type="button" class="gode-tool" data-tool="smudge" role="radio"
+                  aria-checked="false" title="Espátula" aria-label="Espátula">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <!-- Espátula: lâmina larga triangular + cabo -->
+              <path d="M6 19l4-4 8-8 2 2-8 8-4 4z"/>
+              <path d="M18 7l2-2a1 1 0 0 0 0-1.5l-.5-.5a1 1 0 0 0-1.5 0L16 5"/>
+              <path d="M6 19l-2 2"/>
+              <path d="M10 15l-5-1"/>
+            </svg>
+          </button>
+          <button type="button" class="gode-tool" data-tool="pick" role="radio"
+                  aria-checked="false" title="Conta-gotas" aria-label="Conta-gotas">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <!-- Conta-gotas: bulbo no topo, corpo afinando, ponta -->
+              <path d="M20 4a2.5 2.5 0 0 0-3.5 0l-1 1-2-2-1.5 1.5 2 2-6.5 6.5a2 2 0 0 0-.5 1V17h2.5a2 2 0 0 0 1-.5L17 10l2 2L20.5 10.5l-2-2 1-1A2.5 2.5 0 0 0 20 4z"/>
+              <path d="M4.5 19.5L2 22"/>
+            </svg>
+          </button>
+          <button type="button" class="gode-tool gode-clear-inline" id="godeClearInline"
+                  title="Limpar godê" aria-label="Limpar godê">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 7h16"/>
+              <path d="M9 7V4h6v3"/>
+              <path d="M6 7l1 13h10l1-13"/>
+              <path d="M10 11v6M14 11v6"/>
+            </svg>
+          </button>
+          <button type="button" class="gode-tool gode-undo" id="godeUndo"
+                  title="Desfazer (Ctrl+Z)" aria-label="Desfazer (Ctrl+Z)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 14 4 9l5-5"/>
+              <path d="M4 9h9a7 7 0 0 1 0 14H8"/>
+            </svg>
+          </button>
+          <button type="button" class="gode-tool gode-redo" id="godeRedo"
+                  title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer (Ctrl+Shift+Z)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 14l5-5-5-5"/>
+              <path d="M20 9h-9a7 7 0 0 0 0 14h5"/>
+            </svg>
+          </button>
+        </div>
+
+        <canvas id="godeCanvas" class="gode-canvas" aria-label="Godê de mistura de cores"></canvas>
+
+        <div class="gode-sliders">
+          <label>Tamanho <input type="range" id="godeSize" min="6" max="70" value="26" step="1"><b id="godeSizeVal">26</b></label>
+          <label>Fluxo <input type="range" id="godeFlow" min="5" max="100" value="35" step="5"><b id="godeFlowVal">35%</b></label>
+        </div>
+
+        <div class="gode-actions">
+          <button type="button" id="godeLoad" class="pal-btn">Dispor paleta</button>
+          <button type="button" id="godeClear" class="pal-btn">Limpar</button>
+        </div>
+        <p class="gode-hint" id="godeHint"></p>
+      </section>
+    </div>
+
+    <div class="status-bar" id="statusBar">Modo demo — sem Photoshop conectado</div>
+  </div>
+</div>
+
+<script src="js/platform.js"></script>
+<script src="js/color.js"></script>
+<script src="js/state.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/snap.js"></script>
+<script src="js/layout-store.js"></script>
+<script src="js/layout-serializer.js"></script>
+<script src="js/layout-editor.js"></script>
+<script src="js/wheel.js"></script>
+<script src="js/panels.js"></script>
+<script src="js/palettes.js"></script>
+<script src="js/gode.js"></script>
+<script src="js/docking.js"></script>
+<script src="js/ps-bridge.js"></script>
+<script src="js/panel-sync.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

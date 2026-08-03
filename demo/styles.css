@@ -1,0 +1,2001 @@
+/**
+ * Theme_Tokens — Identidade Xuimart.
+ *
+ * Paleta derivada de PADRAO_PLUGINS_XUIMART.md e IDENTITY_GUIDE.md.
+ * Ficam no :root e no .panel: no painel porque é ali que o layout as usa,
+ * no :root porque as janelas flutuantes vivem fora do painel.
+ */
+:root,
+.panel {
+  --panel-bg: #181822;
+  --surface-raised: #20202e;
+  --divider: #37374b;
+  --button-face: #2a2a3a;
+  --button-face-end: #20202e;
+  --icon-stroke: #c8c8e0;
+  --text-primary: #f0f0ff;
+  --text-dim: #8c8ca5;
+  --accent: #de2246;
+  --input-bg: #0e0e14;
+  --input-border: #37374b;
+  --leader-line: #8c8ca5;
+  --tab-active-bg: #20202e;
+  --tab-active-border: #de2246;
+  --warn: #fbbf24;
+  --focus: #de2246;
+  --header-title: #f0f0ff;
+
+  /* Nomes antigos, derivados dos tokens */
+  --bg-panel: var(--panel-bg);
+  --bg-sunken: var(--input-bg);
+  --bg-raised: var(--button-face-end);
+  --bg-raised-hi: var(--button-face);
+  --line: var(--divider);
+  --text: var(--text-primary);
+  --bg-app: #0e0e14;
+
+  /**
+   * Cores que ficaram literais por não terem token na referência:
+   * #35485c (fundo de botão ligado), #4a3a22 (gamut lock ligado),
+   * #d84a3f e #3a2321 (erro no campo hex), #6a0700 e #8f8f8f (cores iniciais
+   * de foreground/background), #e03b30 e #f2a03c (alças da máscara, em
+   * canvas), além de #fff, #000 e rgba() de contorno e sombra.
+   */
+
+  /**
+   * Escala (Requisito 7): --u é uma unidade do Reference_Space em px.
+   * layout.js escreve --scale no #panel a cada redimensionamento; toda medida
+   * de referência aparece uma única vez, multiplicada por --u.
+   */
+  --scale: 1;
+  --u: calc(1px * var(--scale));
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 24px 16px;
+  background: var(--bg-app);
+  color: var(--text);
+  font: 12px/1.4 "Segoe UI", "Adobe Clean", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/**
+ * O contêiner simula a largura de encaixe do painel no Photoshop: é ele que
+ * layout.js mede para calcular o Scale_Factor. Em 628 px a demo abre em
+ * escala 1, exatamente no Reference_Space.
+ */
+/**
+ * O contêiner simula a largura de encaixe do painel no Photoshop: é ele que
+ * layout.js mede para calcular o Scale_Factor. Em 628px o painel abre em
+ * escala 1. Se a tela for menor, o painel encolhe. Se for maior, fica em 628.
+ */
+.demo-shell { max-width: 628px; margin: 0 auto; }
+
+.demo-note {
+  color: var(--text-dim);
+  font-size: 11px;
+  margin: 0 0 12px;
+}
+
+/**
+ * Moldura do painel (Requisito 1): 628 x 907 unidades, sem arredondamento.
+ * Os três divisores de 1 unidade (Y 56, 608 e 859) são camadas de fundo, para
+ * não precisar de nós novos no DOM.
+ */
+.panel {
+  position: relative;
+  /* A largura e altura iniciais vêm da referência; o usuário pode arrastar
+     as bordas para redimensionar (resize: both requer overflow != visible) */
+  width: calc(628 * var(--u));
+  height: calc(907 * var(--u));
+  background-color: var(--panel-bg);
+  background-image:
+    linear-gradient(var(--divider), var(--divider)),
+    linear-gradient(var(--divider), var(--divider)),
+    linear-gradient(var(--divider), var(--divider));
+  background-repeat: no-repeat;
+  background-size: 100% calc(1 * var(--u));
+  background-position:
+    0 calc(56 * var(--u)),
+    0 calc(608 * var(--u)),
+    0 calc(859 * var(--u));
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  user-select: none;
+  overflow: visible;
+  resize: both;
+  min-width: 280px;
+  min-height: 460px;
+}
+
+/* ---------------- topo ---------------- */
+.top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.swatch-stack { position: relative; width: 76px; height: 66px; flex: none; }
+
+.fg-swatch, .bg-swatch {
+  position: absolute;
+  border: 1px solid var(--divider);
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+}
+.fg-swatch { width: 52px; height: 52px; left: 0; top: 0; z-index: 2; background: #6a0700; }
+.bg-swatch { width: 34px; height: 34px; left: 38px; top: 14px; z-index: 1; background: #8f8f8f; }
+
+.swap-btn {
+  position: absolute;
+  right: -4px; top: -4px;
+  width: 20px; height: 20px;
+  z-index: 3;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+}
+.swap-btn:hover { color: var(--text); }
+
+
+/* Barra de valor */
+.value-bar { margin-top: 6px; }
+.value-track {
+  position: relative;
+  height: 22px;
+  border: 1px solid var(--divider);
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.value-track:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.value-track canvas { display: block; width: 100%; height: 100%; }
+.value-thumb {
+  position: absolute;
+  top: -1px;
+  width: 7px; height: 24px;
+  margin-left: -3.5px;
+  border: 2px solid #fff;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px #000;
+  pointer-events: none;
+}
+
+.harmony-btn {
+  width: 32px; height: 32px;
+  flex: none;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.harmony-btn:hover { border-color: var(--bg-raised-hi); }
+.harmony-btn.is-active { border-color: var(--accent); }
+
+/* ---------------- stage da roda: tudo posicionado em torno do canvas ---------------- */
+.wheel-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  margin: 2px 0 0;
+}
+
+/* A roda ocupa uma fração do stage; a margem restante acomoda os satélites */
+#wheel {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 76%;
+  height: auto;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/**
+ * Todo grupo ao redor da roda é um arco: cobre o stage inteiro e posiciona
+ * os filhos por coordenada polar a partir do centro. Sem o inset o
+ * contêiner colapsa e os filhos se ancoram no lugar errado.
+ */
+.arc { position: absolute; inset: 0; pointer-events: none; }
+.arc > * {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+.hex-row {
+  position: absolute;
+  right: 4%; bottom: 6%;
+  display: flex; align-items: center; gap: 3px;
+  z-index: 5;
+}
+
+/* Botão satélite unificado */
+.sat-btn {
+  width: 34px; height: 34px;
+  flex: none;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 1px solid var(--divider);
+  background: var(--bg-raised);
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  line-height: 1;
+}
+.sat-btn canvas { display: block; max-width: 100%; max-height: 100%; }
+.sat-btn:hover:not(:disabled) { background: var(--bg-raised-hi); }
+.sat-btn:disabled { opacity: .3; cursor: default; }
+.sat-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.sat-btn[aria-pressed="true"], .sat-btn.is-active {
+  border-color: var(--accent);
+  background: #35485c;
+}
+
+.gamut-only[hidden] { display: none; }
+#gamutLockBtn[aria-pressed="true"] { border-color: var(--warn); background: #4a3a22; }
+
+.dial-wrap { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.dial { cursor: ns-resize; border-radius: 50%; display: block; max-width: 100%; }
+.dial:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.dial-label { font-size: 9px; color: var(--text-dim); letter-spacing: .04em; }
+.dial-label b { color: var(--text); font-weight: 600; }
+
+/* Aviso de fora-de-gamut na borda do campo hex */
+#hexInput.out-of-gamut { border-color: var(--warn); }
+
+/**
+ * Popout do seletor de forma.
+ *
+ * `absolute`, não `relative`. Este seletor tem a mesma especificidade de
+ * `.arc > *`, e por vir depois no arquivo ele vencia — os dois popouts do arco
+ * (forma e máscara) ficavam `relative`, o que transforma o left/top escrito por
+ * layout.js em deslocamento a partir da posição de fluxo em vez de posição
+ * absoluta. Resultado: os dois empilhavam colados no canto, independente da
+ * âncora. Era esta a sobreposição que voltava.
+ *
+ * `absolute` também serve de referência para o `.popout-menu`, que é o outro
+ * papel que o `relative` cumpria.
+ */
+.popout { position: absolute; }
+.popout-menu {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 6px);
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  background: var(--surface-raised);
+  border: 1px solid var(--divider);
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .5);
+}
+.popout-menu[hidden] { display: none; }
+
+/* Ícones de harmonia/máscara no arco */
+.harmony-btn, .mask-kind {
+  width: 32px; height: 32px;
+  flex: none;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.harmony-btn canvas, .mask-kind canvas {
+  display: block; max-width: 100%; max-height: 100%;
+}
+.harmony-btn:hover, .mask-kind:hover { border-color: var(--bg-raised-hi); }
+.harmony-btn.is-active, .mask-kind.is-active { border-color: var(--accent); }
+.hex-hash { color: var(--text-dim); font-size: 11px; }
+#hexInput {
+  width: 74px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  font: 600 12px/1 "Consolas", ui-monospace, monospace;
+  padding: 4px 5px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+#hexInput:focus-visible { outline: 2px solid var(--focus); outline-offset: 0; }
+#hexInput.has-error { border-color: #d84a3f; background: #3a2321; }
+
+/* ---------------- tabs ---------------- */
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-top: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.tab {
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  color: var(--text-dim);
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 3px 3px 0 0;
+}
+.tab.is-active { background: var(--bg-panel); color: var(--text); }
+.tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+.tab-body { padding-top: 10px; }
+.pane { display: none; }
+.pane.is-active { display: block; }
+
+/* ---------------- sliders ---------------- */
+.slider-list { display: flex; flex-direction: column; gap: 6px; }
+
+.slider-row { display: flex; align-items: center; gap: 6px; }
+.slider-row .ch-label {
+  width: 12px;
+  color: var(--text-dim);
+  font-size: 10px;
+  text-align: center;
+  flex: none;
+}
+
+.track {
+  position: relative;
+  flex: 1;
+  height: 22px;
+  border: 1px solid var(--divider);
+  border-radius: 2px;
+  cursor: ew-resize;
+  touch-action: none;
+  overflow: hidden;
+}
+.track:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.track canvas { display: block; width: 100%; height: 100%; }
+.thumb {
+  position: absolute;
+  top: -1px;
+  width: 7px; height: 24px;
+  margin-left: -3.5px;
+  border: 2px solid #fff;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px #000;
+  pointer-events: none;
+}
+
+.num-field {
+  width: 52px;
+  flex: none;
+  background: var(--bg-sunken);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  padding: 4px 5px;
+  font: 12px/1 "Segoe UI", sans-serif;
+  border-radius: 2px;
+  text-align: right;
+}
+.num-field:focus-visible { outline: 2px solid var(--focus); outline-offset: 0; }
+
+.mode-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.mode-toggles { margin-left: auto; }
+.mode-caption { color: var(--text-dim); font-size: 10px; letter-spacing: .08em; }
+.mode-btns { display: flex; gap: 3px; flex-wrap: wrap; }
+.mode-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  padding: 3px 7px;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.mode-btn:hover { background: var(--bg-raised); }
+.mode-btn.is-active { border-color: var(--text); }
+.mode-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+/* Botões de alternância da linha de modos (luminosidade e conferência) */
+.tool-group { display: flex; gap: 4px; }
+.tool-btn {
+  width: 28px; height: 24px;
+  flex: none;
+  padding: 0;
+  background: var(--bg-raised);
+  border: 1px solid var(--divider);
+  border-radius: 3px;
+  color: var(--icon-stroke);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.tool-btn:hover { background: var(--bg-raised-hi); }
+.tool-btn canvas { display: block; }
+.tool-btn[aria-pressed="true"] { border-color: var(--accent); background: #35485c; }
+.tool-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+/* ---------------- mixer (barras estilo Coolorus) ---------------- */
+.mix-strip { margin-bottom: 8px; }
+.mix-strip[hidden] { display: none; }
+.mix-strip-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+.mix-strip-title { font-size: 11px; color: var(--text-dim); flex: 1; }
+.mix-strip-mode {
+  background: var(--bg-raised);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.mix-strip-auto {
+  font-size: 10px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.mix-strip-auto input { accent-color: var(--accent); cursor: pointer; margin: 0; }
+
+.mix-strip-track {
+  position: relative;
+  height: 28px;
+  border: 1px solid var(--divider);
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+}
+.mix-strip-canvas { display: block; width: 100%; height: 100%; }
+.mix-strip-thumb {
+  position: absolute;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  margin-left: -3px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.6);
+  border-radius: 1px;
+  pointer-events: none;
+  left: 50%;
+}
+
+/* Barra de histórico e swatches: células discretas */
+.mix-strip-bar {
+  display: flex;
+  height: 28px;
+  border: 1px solid var(--divider);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.mix-strip-bar button {
+  flex: 1;
+  border: none;
+  border-right: 1px solid rgba(0,0,0,.15);
+  padding: 0;
+  cursor: pointer;
+  min-width: 0;
+}
+.mix-strip-bar button:last-child { border-right: none; }
+.mix-strip-bar button:focus-visible { outline: 2px solid var(--focus) inset; }
+.mix-strip-bar button.is-current { box-shadow: inset 0 0 0 2px #fff; }
+
+/* Swatches dentro do mixer (menores que a faixa de paleta) */
+.mix-strip-swatches { min-height: 22px; }
+
+/* Rodapé com toggles e ações */
+.mix-strip-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--divider);
+}
+.mix-strip-toggles { display: flex; gap: 5px; }
+.mix-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--divider);
+  background: var(--button-face-end);
+  cursor: pointer;
+  padding: 0;
+}
+.mix-dot.is-active { background: var(--text-dim); }
+.mix-dot:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.mix-strip-actions { display: flex; gap: 4px; }
+
+.status-bar {
+  margin-top: 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* Rodapé Xuimart — logo branca centralizada */
+.xuimart-footer {
+  margin-top: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--divider);
+  text-align: center;
+}
+.xuimart-logo {
+  height: 14px;
+  opacity: 0.7;
+  transition: opacity .2s;
+}
+.xuimart-logo:hover { opacity: 1; }
+
+/* Logo Xuimart no cabeçalho — clicável, abre o site */
+.xuimart-header-logo-link {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 0;
+}
+.xuimart-header-logo {
+  height: 16px;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.xuimart-header-logo:hover { opacity: 1; }
+
+/* ---------------- cabeçalho e menu sanduíche ---------------- */
+.panel-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel-title { font-size: 11px; color: var(--text-dim); letter-spacing: .03em; }
+
+.menu-btn {
+  width: 24px; height: 20px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.menu-btn:hover { color: var(--text); background: var(--bg-raised); }
+.menu-btn[aria-expanded="true"] { color: var(--text); background: var(--bg-raised-hi); }
+.menu-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.panel-menu {
+  position: absolute;
+  top: 24px; right: 0;
+  z-index: 20;
+  min-width: 216px;
+  background: var(--surface-raised);
+  border: 1px solid var(--divider);
+  border-radius: 3px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.5);
+  padding: 6px 0;
+}
+
+.menu-group {
+  margin: 2px 0 4px;
+  padding: 0 10px;
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.menu-sep { border: none; border-top: 1px solid var(--divider); margin: 6px 0; }
+
+.menu-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+}
+.menu-label { font-size: 11px; color: var(--text); flex: 1; }
+
+.menu-row select {
+  background: var(--bg-raised);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  cursor: pointer;
+  min-width: 62px;
+}
+.menu-row select:focus-visible { outline: 2px solid var(--focus); }
+
+.menu-hint { margin: 2px 0 4px; padding: 0 10px; font-size: 9px; color: var(--text-dim); }
+
+.menu-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.menu-check:hover { background: var(--bg-raised-hi); }
+.menu-check input { accent-color: var(--accent); cursor: pointer; margin: 0; }
+
+.menu-sub { padding-left: 6px; }
+.menu-sub[aria-disabled="true"] { opacity: .4; pointer-events: none; }
+
+/* ---------------- rampa B/W ---------------- */
+.bw-block { margin-top: 10px; }
+.bw-row { display: flex; align-items: stretch; gap: 6px; }
+
+.bw-ramp {
+  display: flex;
+  flex: 1;
+  border: 1px solid var(--divider);
+  border-radius: 2px;
+  overflow: hidden;
+  min-height: 30px;
+}
+.bw-ramp button {
+  flex: 1;
+  border: none;
+  border-right: 1px solid rgba(0,0,0,.25);
+  padding: 0;
+  cursor: pointer;
+}
+.bw-ramp button:last-child { border-right: none; }
+.bw-ramp button.is-current { box-shadow: inset 0 0 0 2px var(--accent); }
+.bw-ramp button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+.bw-stepper { display: flex; flex-direction: column; gap: 2px; }
+.bw-stepper button {
+  width: 28px; flex: 1;
+  background: var(--bg-raised);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 2px;
+  font-size: 13px;
+  line-height: 1;
+}
+.bw-stepper button:hover:not(:disabled) { background: var(--bg-raised-hi); }
+.bw-stepper button:disabled { opacity: .35; cursor: default; }
+.bw-stepper button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.bw-count { display: block; margin-top: 5px; font-size: 10px; color: var(--text-dim); }
+.bw-count b { color: var(--text); }
+
+/* ---------------- paletas ---------------- */
+.palette-head { display: flex; gap: 4px; align-items: center; }
+.palette-head select {
+  flex: 1; min-width: 0;
+  background: var(--bg-raised);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  padding: 4px 5px;
+  border-radius: 2px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.pal-btn {
+  background: var(--bg-raised);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: 2px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pal-btn:hover { background: var(--bg-raised-hi); }
+.pal-btn.primary { border-color: var(--accent); font-weight: 600; }
+.pal-btn:focus-visible, .palette-head select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.palette-name {
+  width: 100%;
+  margin-top: 6px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  padding: 4px 6px;
+  border-radius: 2px;
+  font-size: 11px;
+}
+.palette-name:focus-visible { outline: 2px solid var(--focus); }
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+  gap: 4px;
+  margin-top: 8px;
+  min-height: 44px;
+}
+.palette-cell { position: relative; }
+.palette-chip {
+  width: 100%; height: 38px;
+  border: 1px solid var(--divider);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  display: block;
+}
+.palette-chip:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.palette-del {
+  position: absolute;
+  top: -4px; right: -4px;
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  border: 1px solid var(--divider);
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity .12s;
+}
+.palette-cell:hover .palette-del,
+.palette-del:focus-visible { opacity: 1; }
+
+.palette-empty { font-size: 10px; color: var(--text-dim); margin: 0; grid-column: 1 / -1; }
+
+.palette-actions { display: flex; gap: 4px; margin-top: 10px; flex-wrap: wrap; }
+
+.palette-export {
+  width: 100%;
+  margin-top: 8px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  font: 11px/1.5 "Consolas", ui-monospace, monospace;
+  padding: 5px;
+  border-radius: 2px;
+  resize: vertical;
+}
+
+.palette-status { font-size: 10px; color: var(--text-dim); margin: 8px 0 0; min-height: 13px; }
+
+/* ---------------- godê ---------------- */
+.gode-tools { display: flex; gap: 3px; margin-bottom: 8px; }
+.gode-tool {
+  flex: 1;
+  background: var(--bg-raised);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  padding: 5px 4px;
+  font-size: 11px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.gode-tool:hover { background: var(--bg-raised-hi); }
+.gode-tool.is-active { border-color: var(--accent); background: #35485c; }
+.gode-tool:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.gode-clear-inline { border-color: var(--text-dim); margin-left: auto; }
+.gode-undo, .gode-redo { border-color: var(--text-dim); flex: none; }
+.gode-tool svg { display: block; width: 16px; height: 16px; }
+
+/* O pane do godê usa flex column para que o viewport preencha o espaço.
+   O `display` fica preso ao estado ativo: num seletor com id ele venceria
+   `.pane { display: none }` por especificidade e o godê ficaria visível em
+   todas as abas, cobrindo as outras — era o que quebrava a troca de aba.
+   Na janela flutuante não há aba, o pane é sempre o conteúdo. */
+.panel #paneGode.is-active,
+.float-body #paneGode {
+  display: flex;
+  flex-direction: column;
+}
+
+.gode-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* Viewport do godê: contém o canvas com zoom/pan.
+   A barra de arraste inferior é criada pelo JS para redimensionar. */
+.gode-viewport {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  min-height: 100px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+
+/* Barra de arraste para redimensionar o godê verticalmente */
+.gode-resize-handle {
+  width: 100%;
+  height: 8px;
+  cursor: ns-resize;
+  background: var(--divider);
+  border-radius: 0 0 3px 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.gode-resize-handle:hover { opacity: 1; }
+.gode-resize-handle::after {
+  content: '';
+  width: 30px;
+  height: 3px;
+  border-top: 1px solid var(--text-dim);
+  border-bottom: 1px solid var(--text-dim);
+}
+/* O canvas tem resolução interna fixa (340x190, ver gode.js). O JS
+   (gode.js) calcula o tamanho exibido mantendo essa proporção dentro do
+   viewport e centraliza — evita distorção quando o viewport é
+   redimensionado com proporção diferente. */
+.gode-viewport .gode-canvas {
+  border: none;
+  border-radius: 0;
+  position: absolute;
+  display: block;
+}
+
+.gode-sliders { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.gode-sliders label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; color: var(--text-dim);
+}
+.gode-sliders input[type="range"] { flex: 1; accent-color: var(--accent); }
+.gode-sliders b { color: var(--text); min-width: 32px; text-align: right; font-weight: 600; }
+
+.gode-actions { display: flex; gap: 4px; margin-top: 8px; }
+.gode-hint { font-size: 10px; color: var(--text-dim); margin: 8px 0 0; min-height: 13px; }
+
+/* ---------------- forma do seletor ---------------- */
+
+
+/* ---------------- controles de rotação ---------------- */
+.rot-btn {
+  min-width: 24px; height: 22px;
+  background: var(--bg-raised);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 4px;
+}
+.rot-btn:hover { background: var(--bg-raised-hi); }
+.rot-btn.wide { font-size: 10px; padding: 0 7px; }
+.rot-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.rotate-value {
+  min-width: 40px;
+  text-align: center;
+  background: var(--bg-sunken);
+  border: 1px solid var(--divider);
+  border-radius: 2px;
+  padding: 3px 4px;
+  font: 600 11px/1 "Consolas", ui-monospace, monospace;
+}
+
+/* ---------------- comparação nova/antiga ---------------- */
+.fg-swatch { position: relative; overflow: hidden; }
+
+.fg-prev {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  border-top-left-radius: 0;
+  display: none;
+}
+.fg-swatch.is-comparing .fg-prev { display: block; }
+
+/* ---------------- travamentos e máscara no trilho ---------------- */
+#lumLockBtn canvas, #gamutMaskBtn canvas { display: block; }
+
+.rail-btn[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: #35485c;
+}
+
+
+
+/* ---------------- conferência de valores ---------------- */
+#valueCheckBtn canvas { display: block; }
+
+/* O godê mantém tinta real no canvas; aqui o cinza é só exibição */
+.gode-canvas.is-value-check { filter: grayscale(1); }
+
+/* ---------------- rack de formatos de máscara ---------------- */
+.mask-rack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 10px 6px;
+}
+
+.mask-kind {
+  width: 32px; height: 32px;
+  flex: none;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.mask-kind:hover { border-color: var(--bg-raised-hi); }
+.mask-kind.is-active { border-color: var(--accent); }
+.mask-kind:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+/* ---------------- separar aba em janela ---------------- */
+.detach-btn {
+  margin-left: auto;
+  align-self: flex-end;
+  width: 24px; height: 24px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.detach-btn:hover:not(:disabled) { color: var(--text); background: var(--bg-raised); }
+.detach-btn:disabled { opacity: .3; cursor: default; }
+.detach-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.detached-note {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.9;
+  margin: 0;
+}
+
+.float-window {
+  position: fixed;
+  z-index: 100;
+  /* width e height definidos pelo JS (docking.js) */
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .55);
+  user-select: none;
+  overflow: hidden;
+  resize: both;
+  /* Dentro de um painel do Photoshop a viewport pode ser estreita: o mínimo
+     precisa caber ali, senão a janela nasce cortada. */
+  min-width: 240px;
+  /* 140px é o mínimo dos Sliders no modo B/W (1 canal); outras abas usam
+     essa mesma base e crescem pelo conteúdo. Um valor mais alto aqui
+     forçava uma margem vazia quando o conteúdo real é menor. */
+  min-height: 140px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+}
+.float-window.is-dragging { opacity: .92; }
+
+.float-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px 5px 9px;
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--line);
+  border-radius: 3px 3px 0 0;
+  cursor: grab;
+  touch-action: none;
+}
+.float-window.is-dragging .float-bar { cursor: grabbing; }
+
+.float-title { flex: 1; font-size: 11px; color: var(--text); }
+
+.float-dock {
+  width: 22px; height: 20px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.float-dock:hover { color: var(--text); background: var(--bg-raised); }
+.float-dock:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.float-body { padding: 10px; overflow: auto; flex: 1; min-height: 0; }
+
+/* Dentro da janela a aba está sempre visível, independente da aba ativa.
+   Reset do overflow fixo que existe dentro do painel. */
+.float-body .pane { display: block; height: auto; overflow: visible; }
+
+/* ---------------- Redimensionamento das janelas flutuantes ---------------- */
+/* O resize nativo (resize: both) na .float-window acima é a forma principal.
+   As alças JS são mantidas como zona de arraste expandida. */
+.float-resize {
+  position: absolute;
+  z-index: 20;
+}
+.float-resize--n  { top: -5px; left: 10px; right: 10px; height: 10px; cursor: ns-resize; }
+.float-resize--s  { bottom: -5px; left: 10px; right: 10px; height: 10px; cursor: ns-resize; }
+.float-resize--e  { right: -5px; top: 10px; bottom: 10px; width: 10px; cursor: ew-resize; }
+.float-resize--w  { left: -5px; top: 10px; bottom: 10px; width: 10px; cursor: ew-resize; }
+.float-resize--ne { top: -5px; right: -5px; width: 14px; height: 14px; cursor: nesw-resize; }
+.float-resize--nw { top: -5px; left: -5px; width: 14px; height: 14px; cursor: nwse-resize; }
+.float-resize--se { bottom: -5px; right: -5px; width: 14px; height: 14px; cursor: nwse-resize; }
+.float-resize--sw { bottom: -5px; left: -5px; width: 14px; height: 14px; cursor: nesw-resize; }
+
+.float-window.is-resizing { opacity: .95; }
+.float-window.is-resizing .float-body { pointer-events: none; }
+
+/* O painel principal NÃO tem resize manual — escala automaticamente */
+
+
+/* ==================================================================== */
+/* LAYOUT DE REFERÊNCIA (Requisitos 1 a 7)                              */
+/*                                                                      */
+/* Toda medida daqui para baixo está no Reference_Space (628 x 907) e é  */
+/* escrita como `calc(N * var(--u))`, com --u = 1px * --scale.           */
+/*                                                                      */
+/* Escolha de ancoragem: em vez de reestruturar o DOM, os contêineres    */
+/* que faziam layout (.top-row, .swatch-stack, .wheel-stage, .arc)       */
+/* passam a ser sobreposições sem layout, cobrindo o painel inteiro      */
+/* (`inset: 0`, `pointer-events: none`), e cada controle móvel é         */
+/* posicionado direto no espaço do painel por layout.js, pelo centro     */
+/* (translate(-50%,-50%)). Assim ângulo e raio da âncora valem em        */
+/* coordenadas do painel, que é onde a referência foi medida.            */
+/*                                                                      */
+/* As regras são todas prefixadas por `.panel` de propósito: uma aba     */
+/* separada em janela flutuante fica fora do painel e volta a usar o     */
+/* layout em fluxo das regras genéricas acima.                           */
+/* ==================================================================== */
+
+/* ---------------- cabeçalho (Requisito 1.5, 1.6) ---------------- */
+.panel .panel-header {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%;
+  height: calc(56 * var(--u));
+  display: block;
+  padding: 0;
+  margin: 0;
+  border-bottom: none;
+}
+
+.panel .panel-title {
+  position: absolute;
+  left: calc(16 * var(--u));
+  top: calc(26 * var(--u));
+  font-size: max(12px, calc(13 * var(--u)));
+  line-height: calc(16 * var(--u));
+  color: var(--header-title);
+  letter-spacing: 0;
+}
+
+.panel .menu-btn {
+  position: absolute;
+  left: calc(597 * var(--u));
+  top: calc(33 * var(--u));
+  transform: translate(-50%, -50%);
+  width: calc(28 * var(--u));
+  height: calc(28 * var(--u));
+  font-size: calc(15 * var(--u));
+  color: var(--icon-stroke);
+}
+
+/* O menu sanduíche não faz parte do Layout_De_Referência: só a origem
+   acompanha a escala; as medidas internas dele seguem em px. */
+.panel .panel-menu {
+  top: calc(50 * var(--u));
+  right: calc(10 * var(--u));
+}
+
+/* ---------------- swatches (Requisito 4.8) ---------------- */
+.panel .top-row {
+  position: absolute;
+  inset: 0;
+  display: block;
+  margin: 0;
+  pointer-events: none;
+}
+
+.panel .swatch-stack {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+}
+.panel .swatch-stack > * {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+.panel .fg-swatch {
+  width: calc(92 * var(--u));
+  height: calc(92 * var(--u));
+  border: calc(1 * var(--u)) solid var(--divider);
+  z-index: 2;
+}
+.panel .bg-swatch {
+  width: calc(72 * var(--u));
+  height: calc(72 * var(--u));
+  border: calc(1 * var(--u)) solid var(--divider);
+  z-index: 1;
+}
+.panel .swap-btn {
+  right: auto;
+  width: calc(26 * var(--u));
+  height: calc(26 * var(--u));
+  border-radius: 50%;
+  border: calc(1 * var(--u)) solid var(--divider);
+  background: linear-gradient(180deg, var(--button-face), var(--button-face-end));
+  color: var(--icon-stroke);
+  font-size: calc(13 * var(--u));
+  z-index: 3;
+}
+
+/* ---------------- stage da roda ---------------- */
+/* A sobreposição cobre o painel todo: o que define a banda 57..608 é a
+   posição dos controles, não o tamanho deste contêiner. */
+.panel .wheel-stage {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  aspect-ratio: auto;
+  margin: 0;
+  pointer-events: none;
+}
+.panel #wheel,
+.panel .hex-row { pointer-events: auto; }
+
+/* Requisito 2.1: 426 x 426 unidades centradas no Wheel_Center */
+.panel #wheel {
+  left: calc(325 * var(--u));
+  top: calc(352 * var(--u));
+  width: calc(426 * var(--u));
+  height: calc(426 * var(--u));
+}
+
+/* ---------------- botões satélite (Requisitos 4.1, 6.3, 6.4) ---------------- */
+/**
+ * Controles ancorados no arco: tamanho puramente proporcional, SEM piso em px.
+ *
+ * O piso em px era a causa de toda a sobreposição. A distância entre duas
+ * âncoras vive no Reference_Space e encolhe com a escala; um piso em px não
+ * encolhe junto. Abaixo de certa escala o botão passava a ser maior que o vão
+ * entre âncoras vizinhas e eles se cobriam — e nenhuma correção posterior
+ * resolve isso, porque a geometria já está inconsistente.
+ *
+ * Com tamanho proporcional a relação é preservada em qualquer escala: se o
+ * layout de referência não tem sobreposição em escala 1, não tem em nenhuma.
+ * O alvo de clique é protegido por MIN_SCALE em layout.js, que impede o painel
+ * de encolher além do ponto em que os controles ficariam pequenos demais.
+ */
+.panel .sat-btn,
+.panel #iconArc > * {
+  width: calc(44 * var(--u));
+  height: calc(44 * var(--u));
+  border: calc(1 * var(--u)) solid var(--divider);
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--button-face), var(--button-face-end));
+  color: var(--icon-stroke);
+  font-size: calc(16 * var(--u));
+}
+.panel .sat-btn canvas {
+  width: calc(25 * var(--u));
+  height: calc(25 * var(--u));
+  max-width: none;
+  max-height: none;
+}
+.panel #iconArc canvas {
+  width: calc(26 * var(--u));
+  height: calc(26 * var(--u));
+  max-width: none;
+  max-height: none;
+}
+
+/* Requisito 4.3: indicação de seleção — borda accent, sem box-shadow.
+   O box-shadow de 2u com accent vermelho Xuimart invadia os vizinhos
+   visualmente e dava a impressão de sobreposição. Uma borda de 1.5u basta. */
+.panel #iconArc > .is-active,
+.panel .sat-btn.is-active,
+.panel .sat-btn[aria-pressed="true"] {
+  border-color: var(--accent);
+  border-width: calc(1.5 * var(--u));
+}
+.panel #gamutLockBtn[aria-pressed="true"] {
+  border-color: var(--warn);
+  border-width: calc(1.5 * var(--u));
+}
+
+/* Botões dentro do popout da máscara: menores que os do arco. O seletor pede
+   `.sat-btn` de propósito — a classe `gamut-only` também marca o contêiner do
+   popout, que não deve receber tamanho de botão. */
+.panel .sat-btn.gamut-only,
+.panel #gamutTools .sat-btn {
+  width: calc(34 * var(--u));
+  height: calc(34 * var(--u));
+  font-size: calc(14 * var(--u));
+}
+.panel .sat-btn.gamut-only canvas,
+.panel #gamutTools .sat-btn canvas {
+  width: calc(18 * var(--u));
+  height: calc(18 * var(--u));
+}
+
+/**
+ * O popout da máscara abre em coluna e ancorado à direita. Em linha, três
+ * botões centrados sob um controle que fica em x ≈ 586 passariam da borda
+ * direita do painel (628). Em coluna a largura é a de um botão.
+ */
+.panel #gamutTools {
+  left: auto;
+  right: 0;
+  transform: none;
+  flex-direction: column;
+}
+
+/* O popout do seletor de forma tem o tamanho do próprio botão, e o menu
+   sai dele — o menu também não tem âncora própria na referência. */
+.panel .popout {
+  width: calc(44 * var(--u));
+  height: calc(44 * var(--u));
+}
+
+
+.panel .popout-menu {
+  top: calc(100% + 6 * var(--u));
+  gap: calc(3 * var(--u));
+  padding: calc(4 * var(--u));
+  border-radius: calc(20 * var(--u));
+  background: var(--surface-raised);
+  border: calc(1 * var(--u)) solid var(--divider);
+}
+/* Menores que 44 para o menu não passar da borda direita do painel */
+.panel .popout-menu .sat-btn {
+  width: calc(34 * var(--u));
+  height: calc(34 * var(--u));
+}
+.panel .popout-menu .sat-btn canvas {
+  width: calc(20 * var(--u));
+  height: calc(20 * var(--u));
+}
+
+/* ---------------- dials do trilho esquerdo (Requisitos 4.4, 4.5) ---------------- */
+.panel .dial-wrap {
+  width: calc(44 * var(--u));
+  height: calc(44 * var(--u));
+  display: block;
+  gap: 0;
+}
+.panel .dial {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+.panel .dial-label {
+  position: absolute;
+  left: 50%;
+  top: calc(44 * var(--u));   /* 22 unidades abaixo do centro do dial */
+  transform: translateX(-50%);
+  font-size: max(8px, calc(9 * var(--u)));
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+
+/* ---------------- campo hex (Requisito 5.1) ---------------- */
+/* A caixa do #hexRow é exatamente o campo de entrada (100 x 36), então a
+   âncora hex.field cai no centro do campo; o "#" fica fora, à esquerda. */
+.panel .hex-row {
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  display: block;
+  width: calc(100 * var(--u));
+  height: calc(36 * var(--u));
+  gap: 0;
+}
+.panel .hex-hash {
+  position: absolute;
+  left: calc(-16 * var(--u));
+  top: calc(10 * var(--u));
+  font-size: max(12px, calc(14 * var(--u)));
+  line-height: 1;
+}
+.panel #hexInput {
+  width: 100%;
+  height: 100%;
+  padding: 0 calc(6 * var(--u));
+  background: var(--input-bg);
+  border: calc(1 * var(--u)) solid var(--input-border);
+  border-radius: calc(2 * var(--u));
+  font-size: max(12px, calc(14 * var(--u)));
+  text-align: right;
+}
+
+/* Barra de valor: só existe no formato disco e não consta da referência.
+   Fica na faixa livre logo abaixo da roda. */
+.panel .value-bar {
+  position: absolute;
+  left: calc(41 * var(--u));
+  top: calc(588 * var(--u));
+  width: calc(430 * var(--u));
+  margin: 0;
+}
+.panel .value-track { height: calc(16 * var(--u)); }
+.panel .value-thumb {
+  top: 0;
+  width: calc(4 * var(--u));
+  height: 100%;
+  margin-left: calc(-2 * var(--u));
+  border: none;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: 0 0 0 calc(1 * var(--u)) rgba(0, 0, 0, .8);
+}
+
+/* ---------------- abas (Requisitos 5.2, 5.3) ---------------- */
+.panel .tabs {
+  position: absolute;
+  left: 0;
+  top: calc(619 * var(--u));
+  width: 100%;
+  height: calc(38 * var(--u));
+  display: block;
+  gap: 0;
+  margin: 0;
+  border-bottom: none;
+  z-index: 5;
+}
+.panel .tab {
+  position: absolute;
+  top: 0;
+  height: calc(38 * var(--u));
+  padding: 0;
+  font-size: max(12px, calc(13 * var(--u)));
+  border: calc(1 * var(--u)) solid transparent;
+  border-radius: calc(3 * var(--u));
+  background: var(--surface-raised);
+  color: var(--text-dim);
+}
+.panel #tabSliders  { left: calc(14 * var(--u));  width: calc(90 * var(--u)); }
+.panel #tabMixers   { left: calc(111 * var(--u)); width: calc(90 * var(--u)); }
+.panel #tabPalettes { left: calc(208 * var(--u)); width: calc(89 * var(--u)); }
+.panel #tabGode     { left: calc(304 * var(--u)); width: calc(82 * var(--u)); }
+.panel .tab.is-active {
+  background: var(--tab-active-bg);
+  border-color: var(--tab-active-border);
+  color: var(--text-primary);
+}
+
+.panel .detach-btn {
+  position: absolute;
+  left: calc(600 * var(--u));
+  top: calc((638 - 619) * var(--u));
+  transform: translate(-50%, -50%);
+  width: calc(28 * var(--u));
+  height: calc(28 * var(--u));
+  margin: 0;
+  align-self: auto;
+  font-size: calc(14 * var(--u));
+}
+
+/* Conteúdo das abas: começa em Y 661, termina em Y 860 (antes da status bar).
+   Scroll vertical interno para abas com conteúdo grande (mixer, godê).
+   z-index garante que fique acima dos overlays da roda (wheel-stage etc).
+   `bottom` em vez de `height` fixa: quando o painel é esticado manualmente
+   para baixo (resize: both), o espaço extra vai para o conteúdo da aba
+   (ex: canvas do godê) em vez de deixar um vão vazio antes da status bar. */
+.panel .tab-body {
+  position: absolute;
+  left: 0;
+  top: calc(661 * var(--u));
+  right: 0;
+  bottom: calc(47 * var(--u));
+  padding: 0;
+  overflow: visible;
+  z-index: 5;
+}
+.panel .pane { position: relative; height: 100%; overflow-y: auto; overflow-x: hidden; }
+/* Sliders têm layout absoluto interno — overflow visible para não cortar */
+.panel #paneSliders { overflow: visible; }
+/* As abas não-sliders: padding interno, scroll vertical quando precisa */
+.panel .pane:not(#paneSliders) {
+  padding: calc(6 * var(--u)) calc(14 * var(--u));
+}
+/* Esconde a scrollbar visualmente mas mantém a funcionalidade */
+.panel .pane::-webkit-scrollbar { width: 4px; }
+.panel .pane::-webkit-scrollbar-track { background: transparent; }
+.panel .pane::-webkit-scrollbar-thumb { background: var(--divider); border-radius: 2px; }
+.panel .pane::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ---------------- sliders (Requisitos 5.4, 5.5) ---------------- */
+.panel .slider-list {
+  position: absolute;
+  left: 0;
+  top: calc((691.5 - 13 - 661) * var(--u));
+  width: 100%;
+  gap: calc((44 - 26) * var(--u));   /* passo vertical de 44 unidades */
+}
+/* A referência mostra 3 canais. O modo CMYK tem 4: o passo aperta para a
+   quarta linha não invadir a linha de modos. */
+.panel .slider-list:has(> .slider-row:nth-child(4)) { gap: calc(9 * var(--u)); }
+
+.panel .slider-row {
+  position: relative;
+  height: calc(26 * var(--u));
+  gap: 0;
+}
+.panel .slider-row .ch-label {
+  position: absolute;
+  left: calc(16 * var(--u));
+  top: 50%;
+  transform: translateY(-50%);
+  width: auto;
+  text-align: left;
+  font-size: max(12px, calc(12 * var(--u)));
+}
+.panel .slider-row .track {
+  position: absolute;
+  left: calc(41 * var(--u));
+  top: 50%;
+  transform: translateY(-50%);
+  flex: none;
+  width: calc(475 * var(--u));
+  height: max(18px, calc(23 * var(--u)));
+  border: calc(1 * var(--u)) solid var(--divider);
+  border-radius: calc(2 * var(--u));
+}
+.panel .slider-row .num-field {
+  position: absolute;
+  left: calc(527 * var(--u));
+  top: 50%;
+  transform: translateY(-50%);
+  width: calc(70 * var(--u));
+  height: max(22px, calc(26 * var(--u)));
+  padding: 0 calc(6 * var(--u));
+  border: calc(1 * var(--u)) solid var(--divider);
+  border-radius: calc(3 * var(--u));
+  font-size: max(12px, calc(12 * var(--u)));
+}
+/* Requisito 5.5: barra branca de 4 unidades, altura total, contorno escuro */
+.panel .thumb {
+  top: 0;
+  width: calc(4 * var(--u));
+  height: 100%;
+  margin-left: calc(-2 * var(--u));
+  border: none;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: 0 0 0 calc(1 * var(--u)) rgba(0, 0, 0, .8);
+}
+
+/* A rampa B/W aparece só no modo B/W, que tem um canal: ocupa o espaço
+   livre das outras duas linhas. Não consta da referência. */
+.panel .bw-block {
+  position: absolute;
+  left: calc(16 * var(--u));
+  top: calc((730 - 661) * var(--u));
+  width: calc(581 * var(--u));
+  margin: 0;
+}
+
+/* ---------------- linha de modos (Requisito 5.6) ---------------- */
+.panel .mode-row {
+  position: absolute;
+  left: 0;
+  top: calc((815 - 661) * var(--u));
+  width: 100%;
+  height: calc(33 * var(--u));
+  margin: 0;
+  gap: 0;
+  flex-wrap: nowrap;
+}
+.panel .mode-caption {
+  position: absolute;
+  left: calc(18 * var(--u));
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: max(9px, calc(10 * var(--u)));
+  letter-spacing: .12em;
+}
+.panel .mode-btns {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  gap: 0;
+  pointer-events: none;
+}
+.panel .mode-btn {
+  position: absolute;
+  top: calc((816 - 815) * var(--u));
+  height: calc(31 * var(--u));
+  padding: 0;
+  pointer-events: auto;
+  font-size: max(11px, calc(11 * var(--u)));
+  border-radius: calc(2 * var(--u));
+}
+.panel .mode-btn:nth-child(1) { left: calc(80 * var(--u));  width: calc(39 * var(--u)); }
+.panel .mode-btn:nth-child(2) { left: calc(133 * var(--u)); width: calc(53 * var(--u)); }
+.panel .mode-btn:nth-child(3) { left: calc(201 * var(--u)); width: calc(31 * var(--u)); }
+.panel .mode-btn:nth-child(4) { left: calc(255 * var(--u)); width: calc(50 * var(--u)); }
+.panel .mode-btn:nth-child(5) { left: calc(325 * var(--u)); width: calc(36 * var(--u)); }
+
+.panel .mode-toggles {
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  margin: 0;
+  gap: 0;
+  pointer-events: none;
+}
+.panel .mode-toggles .tool-btn {
+  position: absolute;
+  top: 0;
+  pointer-events: auto;
+  width: max(30px, calc(43 * var(--u)));
+  height: max(24px, calc(33 * var(--u)));
+  border-radius: calc(4 * var(--u));
+  border: calc(1 * var(--u)) solid var(--divider);
+  background: linear-gradient(180deg, var(--button-face), var(--button-face-end));
+}
+.panel .mode-toggles .tool-btn:nth-child(1) { left: calc(497 * var(--u)); }
+.panel .mode-toggles .tool-btn:nth-child(2) { left: calc(550 * var(--u)); }
+.panel .mode-toggles .tool-btn canvas {
+  width: max(14px, calc(18 * var(--u)));
+  height: max(14px, calc(18 * var(--u)));
+}
+
+/* ---------------- barra de status (Requisito 5.7) ---------------- */
+/* A barra de status fica abaixo do conteúdo. Como o tab-body é absolute,
+   a status bar também é absolute mas com z-index para ficar acima do fundo
+   e background opaco para não transparecer conteúdo por trás. */
+.panel .status-bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: calc(47 * var(--u));
+  margin: 0;
+  padding: calc(12 * var(--u)) calc(14 * var(--u)) 0;
+  border-top: calc(1 * var(--u)) solid var(--divider);
+  font-size: max(9px, calc(10 * var(--u)));
+  line-height: calc(13 * var(--u));
+  background: var(--panel-bg);
+  z-index: 10;
+}
+
+/* ==================================================================== */
+/* LAYOUT EDITING MODE (Requisito 8 / 12)                               */
+/* ==================================================================== */
+
+/* 8.2: Accent outlines on movable controls when layout editor is active */
+.layout-editing [data-layout] {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 8.8: Warn outlines when controls overlap */
+.overlap-warn {
+  outline: 2px solid var(--warn) !important;
+  outline-offset: 1px;
+}
+
+/* 12.4: Focus indicator for keyboard navigation in layout editing mode */
+.layout-editing [data-layout]:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* 8.2: Status bar accent color when in layout editing mode */
+.layout-editing .status-bar {
+  color: var(--accent);
+}
+
+/* ==================================================================== */
+/* BLOCO INFERIOR RESPONSIVO                                            */
+/*                                                                      */
+/* A roda continua no Reference_Space (escala por --u). A faixa de baixo */
+/* (abas, sliders, linha de modo, status) passa a ser ancorada no rodapé */
+/* do painel e volta ao layout em fluxo, com alturas que têm piso em px. */
+/* Motivo: no Photoshop a altura do dock não é 907 unidades, então uma   */
+/* posição absoluta em unidades de referência cortava o conteúdo; e um   */
+/* piso em px dentro de uma linha de altura escalada fazia a 4ª linha do */
+/* CMYK invadir a linha MODE.                                           */
+/*                                                                      */
+/* Estas regras vêm depois de propósito: sobrescrevem o bloco de         */
+/* referência acima sem precisar editá-lo.                              */
+/* ==================================================================== */
+
+.panel {
+  --tab-h:    max(28px, calc(38 * var(--u)));
+  --status-h: max(26px, calc(47 * var(--u)));
+  --row-h:    max(24px, calc(26 * var(--u)));
+  --mode-h:   max(28px, calc(33 * var(--u)));
+  --pad-x:    max(10px, calc(14 * var(--u)));
+
+  /* Medidas internas da faixa, num lugar só: as alturas derivadas usam estas. */
+  --pane-pad-y: max(6px, calc(8 * var(--u)));
+  --slider-gap: max(5px, calc(10 * var(--u)));
+  --mode-gap:   max(6px, calc(8 * var(--u)));
+  --bw-h:       max(58px, calc(64 * var(--u)));
+
+  /**
+   * Altura do corpo da aba. NÃO é um número escolhido a olho: é a soma exata
+   * do que os Sliders ocupam, nos mesmos tokens declarados acima.
+   *
+   *   2 × pane-pad-y   16u / 12px
+   *   3 × row-h        78u / 72px   (RGB, HSV, LAB — 3 canais)
+   *   2 × slider-gap   20u / 10px
+   *   1 × mode-gap      8u /  6px
+   *   1 × mode-h       33u / 28px
+   *   ------------------------------
+   *                   155u / 128px
+   *
+   * Qualquer valor acima disso vira banda vazia entre a linha MODE e a barra
+   * de status, porque é --body-h que define essa distância. Era daí que vinha
+   * a margem: 199u contra 155u de conteúdo = 44u de vão.
+   *
+   * A soma fica escrita à mão, e não em calc() com os tokens, porque cada
+   * token é um max() e o CEF do CEP não aceita max() dentro de multiplicação
+   * em calc(). Se mexer num token acima, refaça a conta aqui.
+   */
+  --body-h:   max(128px, calc(155 * var(--u)));
+
+  /**
+   * Altura da área que escala: cabeçalho, swatches, roda e barra de valor.
+   * É o mesmo 608 que layout.js usa como TOP_REFERENCE_HEIGHT para decidir
+   * a escala — os dois descrevem a mesma faixa e precisam concordar.
+   */
+  --top-h:   calc(608 * var(--u));
+  --strip-h: calc(var(--tab-h) + var(--body-h) + var(--status-h));
+
+  /**
+   * Onde a faixa de baixo começa.
+   *
+   * Estava ancorada pelo rodapé (`bottom`), e isso a deixava subir por cima da
+   * roda: a escala tem piso (MIN_SCALE), então a área de cima nunca mede menos
+   * que 608 × 0,55 ≈ 334px, e num painel baixo a soma das duas não cabe. O que
+   * não cabia era desenhado por cima — a faixa cobria o disco e os satélites.
+   *
+   * Com `max()` a faixa nunca sobe acima da área da roda, e num painel alto
+   * continua colada no rodapé, como antes. Quando não cabe, quem sobra é
+   * alcançado por rolagem (ver o shell de cada ambiente), não por sobreposição.
+   */
+  --strip-top: max(var(--top-h), calc(100% - var(--strip-h)));
+
+  /**
+   * A altura do painel passa a ser a soma das duas faixas, em vez das 907
+   * unidades da referência.
+   *
+   * Com 907 fixos havia folga: 608 (roda) + 240 (faixa) = 848. Como a faixa é
+   * ancorada pelo rodapé, essa folga aparecia como banda vazia — antes entre a
+   * linha MODE e o status (via --body-h), e depois de corrigir --body-h ela
+   * simplesmente migraria para cima das abas. Derivando a altura, --strip-top
+   * cai exatamente em --top-h e não sobra vão em lugar nenhum.
+   *
+   * Arrastar a borda (resize: both) continua funcionando; o espaço extra vai
+   * para cima das abas, que é o comportamento esperado de um painel esticado.
+   */
+  height: calc(var(--top-h) + var(--strip-h));
+}
+
+/**
+ * Sem `:has()` — o CEF do CEP não suporta.
+ *
+ * O --body-h fica no valor genérico (max(158px, 199u)) e a margem entre
+ * sliders e MODE é fixa em vez de auto. O buraco some porque o mode-row
+ * não é mais empurrado para o fim do flex.
+ */
+
+/**
+ * CMYK tem 4 canais: a mesma conta com uma linha e um gap a mais.
+ *   16 + 4×26 + 3×10 + 8 + 33 = 191u
+ *   12 + 4×24 + 3×5  + 6 + 28 = 157px
+ * `:has()` não existe no CEF do CEP; ali o CMYK aperta um pouco em vez de
+ * abrir a banda vazia nos outros modos, que é o mal maior.
+ */
+.panel:has(.slider-row:nth-child(4)) {
+  --body-h: max(157px, calc(191 * var(--u)));
+}
+
+/* ---------------- faixa de baixo ancorada pelo topo ---------------- */
+/* Ancorada por `top`, não por `bottom`: é isso que impede a faixa de subir
+   por cima da roda quando o painel é baixo. Ver `--strip-top`. */
+.panel .tabs {
+  top: var(--strip-top);
+  bottom: auto;
+  height: var(--tab-h);
+  display: flex;
+  align-items: stretch;
+  gap: max(4px, calc(7 * var(--u)));
+  padding: 0 var(--pad-x);
+  background: var(--panel-bg);
+  z-index: 6;
+}
+
+/* As abas deixam de ter left/width fixos em unidades: o texto define a caixa. */
+.panel .tab,
+.panel #tabSliders,
+.panel #tabMixers,
+.panel #tabPalettes,
+.panel #tabGode {
+  position: static;
+  left: auto;
+  width: auto;
+  height: 100%;
+  padding: 0 max(9px, calc(12 * var(--u)));
+  flex: 0 0 auto;
+}
+
+.panel .detach-btn {
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
+  margin-left: auto;
+  align-self: center;
+  width: max(22px, calc(28 * var(--u)));
+  height: max(22px, calc(28 * var(--u)));
+  border: 1px solid var(--divider);
+  border-radius: 2px;
+  background: var(--surface-raised);
+  color: var(--text-primary);
+  font-size: max(12px, calc(14 * var(--u)));
+}
+
+/* ---------------- corpo das abas, logo abaixo das abas ---------------- */
+/* A altura é sempre --body-h. O JS (measureBodyHeight) ajusta essa variável
+   dinamicamente para caber o conteúdo do pane ativo — quando Godê ou Paletas
+   precisam de mais espaço, --body-h cresce e a roda encolhe proporcionalmente.
+   Antes havia uma classe .sliders-active que travava height/bottom; agora o JS
+   é a única fonte de verdade para --body-h. */
+.panel .tab-body {
+  top: calc(var(--strip-top) + var(--tab-h));
+  bottom: auto;
+  height: var(--body-h);
+  background: var(--panel-bg);
+  overflow: visible;
+}
+
+/* ---------------- sliders em fluxo ---------------- */
+/* O `display` fica preso ao estado ativo. Declarar `display: flex` num seletor
+   com id venceria `.pane { display: none }` por especificidade, e o pane
+   ficaria visível em todas as abas, cobrindo as outras. */
+.panel #paneSliders {
+  flex-direction: column;
+  justify-content: flex-start;
+  height: auto;
+  padding: var(--pane-pad-y) var(--pad-x);
+  overflow: hidden;
+}
+.panel #paneSliders.is-active { display: flex; }
+
+.panel .slider-list {
+  position: static;
+  left: auto;
+  top: auto;
+  width: auto;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  /* Mesmo valor que entra no cálculo de --body-h: uma fonte só. */
+  gap: var(--slider-gap);
+}
+
+.panel .slider-row {
+  position: static;
+  display: flex;
+  align-items: center;
+  height: var(--row-h);
+  gap: max(5px, calc(8 * var(--u)));
+}
+.panel .slider-row .ch-label {
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
+  flex: 0 0 auto;
+  width: max(12px, calc(16 * var(--u)));
+  text-align: left;
+}
+.panel .slider-row .track {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+  flex: 1 1 auto;
+  width: auto;
+  height: 100%;
+}
+.panel .slider-row .num-field {
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
+  flex: 0 0 auto;
+  width: max(48px, calc(70 * var(--u)));
+  height: 100%;
+}
+
+/* A rampa B/W entra no fluxo, logo abaixo do canal único. */
+.panel .bw-block {
+  position: static;
+  left: auto;
+  top: auto;
+  width: auto;
+  height: var(--bw-h);
+  margin-top: 0;
+}
+
+/* ---------------- linha de modo colada no fim da faixa ---------------- */
+.panel .mode-row {
+  position: static;
+  left: auto;
+  top: auto;
+  width: auto;
+  height: var(--mode-h);
+  margin-top: var(--mode-gap);
+  padding-top: 0;
+  display: flex;
+  align-items: center;
+  gap: max(5px, calc(8 * var(--u)));
+  flex-wrap: nowrap;
+}
+.panel .mode-caption {
+  position: static;
+  left: auto;
+  top: auto;
+  transform: none;
+  flex: 0 0 auto;
+}
+.panel .mode-btns {
+  position: static;
+  left: auto;
+  top: auto;
+  width: auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: max(2px, calc(4 * var(--u)));
+  pointer-events: auto;
+  flex: 0 1 auto;
+}
+.panel .mode-btn {
+  position: static;
+  top: auto;
+  height: max(24px, calc(31 * var(--u)));
+  left: auto !important;
+  width: auto !important;
+  padding: 0 max(5px, calc(7 * var(--u)));
+}
+.panel .mode-toggles {
+  position: static;
+  left: auto;
+  top: auto;
+  width: auto;
+  height: 100%;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: max(4px, calc(6 * var(--u)));
+  pointer-events: auto;
+  flex: 0 0 auto;
+}
+.panel .mode-toggles .tool-btn {
+  position: static;
+  left: auto !important;
+  width: max(30px, calc(43 * var(--u)));
+  height: max(24px, calc(33 * var(--u)));
+}
+
+/* ---------------- godê: o canvas ocupa a sobra ---------------- */
+.panel #paneGode {
+  flex-direction: column;
+  gap: max(5px, calc(8 * var(--u)));
+  height: 100%;
+  overflow: hidden;
+}
+.panel #paneGode.is-active { display: flex; }
+.panel .gode-tools {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: max(3px, calc(4 * var(--u)));
+  margin: 0;
+}
+/**
+ * Botões de ícone: quadrados e do mesmo tamanho.
+ *
+ * Com rótulo de texto eles tinham larguras diferentes e "Conta-gotas" quebrava
+ * em duas linhas, o que empurrava a fileira toda para 2 linhas de altura. Com
+ * ícone o alvo é uniforme e a fileira cabe numa linha.
+ */
+.panel .gode-tool {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: max(26px, calc(32 * var(--u)));
+  height: max(26px, calc(32 * var(--u)));
+  padding: 0;
+  color: var(--icon-stroke);
+}
+.panel .gode-tool svg {
+  width: max(15px, calc(18 * var(--u)));
+  height: max(15px, calc(18 * var(--u)));
+  display: block;
+}
+/* A ferramenta ativa acende o ícone; as ações ficam em tom secundário. */
+.panel .gode-tool.is-active { color: var(--text-primary); }
+.panel .gode-clear-inline,
+.panel .gode-undo,
+.panel .gode-redo { color: var(--text-dim); }
+.panel .gode-clear-inline:hover,
+.panel .gode-undo:hover,
+.panel .gode-redo:hover { color: var(--text-primary); }
+
+/* Limpar abre um vão à esquerda, separando ação de ferramenta. */
+.panel .gode-clear-inline { margin-left: auto; }
+
+/* O canvas solto ou o viewport criado pelo gode.js: o que estiver ali é o
+   filho elástico. Dentro do viewport o canvas segue absoluto, como antes. */
+.panel #paneGode > .gode-canvas,
+.panel #paneGode > .gode-viewport {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 70px;
+  height: auto;
+}
+.panel .gode-sliders,
+.panel .gode-actions { flex: 0 0 auto; margin: 0; }
+.panel .gode-hint { flex: 0 0 auto; margin: 0; }
+
+/* ---------------- status ---------------- */
+.panel .status-bar {
+  top: calc(var(--strip-top) + var(--tab-h) + var(--body-h));
+  bottom: auto;
+  height: var(--status-h);
+  padding: max(5px, calc(9 * var(--u))) var(--pad-x) 0;
+  overflow: hidden;
+}

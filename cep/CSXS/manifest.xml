@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  manifest.xml — Extensão CEP do DrawColor.
+
+  Cobre Photoshop 21+ (incluindo 26+) via runtime legado. O formato 6.0 com
+  CSXS 8.0 e host range até 99.9 garante compatibilidade máxima — mesma
+  estratégia usada por Coolorus, DrawlapsePS e PSFlow Panel.
+-->
+<ExtensionManifest Version="6.0"
+                   ExtensionBundleId="com.drawcolor.colorwheel"
+                   ExtensionBundleVersion="1.0.0"
+                   ExtensionBundleName="DrawColor Wheel">
+
+  <ExtensionList>
+    <Extension Id="com.drawcolor.colorwheel.panel" Version="1.0.0" />
+    <Extension Id="com.drawcolor.colorwheel.tools" Version="1.0.0" />
+  </ExtensionList>
+
+  <ExecutionEnvironment>
+    <HostList>
+      <Host Name="PHXS" Version="[21.0,99.9]" />
+      <Host Name="PHSP" Version="[21.0,99.9]" />
+    </HostList>
+
+    <LocaleList>
+      <Locale Code="All" />
+    </LocaleList>
+
+    <RequiredRuntimeList>
+      <RequiredRuntime Name="CSXS" Version="8.0" />
+    </RequiredRuntimeList>
+  </ExecutionEnvironment>
+
+  <DispatchInfoList>
+    <Extension Id="com.drawcolor.colorwheel.panel">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./index.html</MainPath>
+          <ScriptPath>./jsx/host.jsx</ScriptPath>
+          <CEFCommandLine>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--mixed-context</Parameter>
+          </CEFCommandLine>
+        </Resources>
+
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+
+        <UI>
+          <Type>Panel</Type>
+          <Menu>DrawColor Wheel</Menu>
+          <Geometry>
+            <Size>
+              <Height>600</Height>
+              <Width>380</Width>
+            </Size>
+            <MinSize>
+              <Height>400</Height>
+              <Width>280</Width>
+            </MinSize>
+            <MaxSize>
+              <Height>1800</Height>
+              <Width>1200</Width>
+            </MaxSize>
+          </Geometry>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+
+    <!--
+      Janela de ferramentas: um segundo painel, não um Modeless.
+
+      Modeless parecia o caminho óbvio para "janela solta", mas no Photoshop
+      esse tipo captura a interação do host: com ela aberta não se trabalha no
+      documento. Type Panel resolve os dois lados — o usuário arrasta este
+      painel para fora do dock e ele passa a flutuar em qualquer ponto da tela,
+      inclusive em outro monitor, sem bloquear o Photoshop.
+
+      É uma instância separada da extensão: o estado é sincronizado por evento
+      do CSXS (ver panel-sync.js).
+    -->
+    <Extension Id="com.drawcolor.colorwheel.tools">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./tools.html</MainPath>
+          <ScriptPath>./jsx/host.jsx</ScriptPath>
+          <CEFCommandLine>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--mixed-context</Parameter>
+          </CEFCommandLine>
+        </Resources>
+
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+
+        <UI>
+          <Type>Panel</Type>
+          <Menu>DrawColor Tools</Menu>
+          <Geometry>
+            <Size>
+              <Height>380</Height>
+              <Width>460</Width>
+            </Size>
+            <MinSize>
+              <Height>200</Height>
+              <Width>280</Width>
+            </MinSize>
+            <MaxSize>
+              <Height>1200</Height>
+              <Width>1000</Width>
+            </MaxSize>
+          </Geometry>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+  </DispatchInfoList>
+</ExtensionManifest>

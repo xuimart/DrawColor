@@ -1,0 +1,74 @@
+{
+  "id": "com.drawcolor.colorwheel",
+  "name": "DrawColor Color Wheel",
+  "version": "1.0.0",
+  "main": "index.html",
+  "manifestVersion": 6,
+  "host": {
+    "app": "PS",
+    "minVersion": "23.0.0"
+  },
+  "entrypoints": [
+    {
+      "type": "panel",
+      "id": "com.drawcolor.colorwheel.panel",
+      "label": {
+        "default": "DrawColor Color Wheel"
+      },
+      "minimumSize": {
+        "width": 320,
+        "height": 460
+      },
+      "maximumSize": {
+        "width": 1200,
+        "height": 1800
+      },
+      "preferredDockedSize": {
+        "width": 400,
+        "height": 700
+      },
+      "preferredFloatingSize": {
+        "width": 628,
+        "height": 907
+      },
+      "icons": [
+        {
+          "width": 23,
+          "height": 23,
+          "path": "icons/icon-dark.png",
+          "scale": [1, 2],
+          "theme": ["darkest", "dark", "medium"]
+        },
+        {
+          "width": 23,
+          "height": 23,
+          "path": "icons/icon-light.png",
+          "scale": [1, 2],
+          "theme": ["lightest", "light"]
+        }
+      ]
+    }
+  ],
+  "requiredPermissions": {
+    "localFileSystem": "plugin",
+    "allowCodeGenerationFromStrings": true
+  },
+  "icons": [
+    {
+      "width": 23,
+      "height": 23,
+      "path": "icons/icon-dark.png",
+      "scale": [1, 2],
+      "theme": ["darkest", "dark", "medium"],
+      "species": ["pluginList"]
+    },
+    {
+      "width": 23,
+      "height": 23,
+      "path": "icons/icon-light.png",
+      "scale": [1, 2],
+      "theme": ["lightest", "light"],
+      "species": ["pluginList"]
+    }
+  ]
+}

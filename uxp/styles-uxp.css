@@ -1,0 +1,180 @@
+/**
+ * styles-uxp.css — Compensações de CSS para o runtime UXP.
+ *
+ * Carregado DEPOIS de styles.css, só no shell UXP. O UXP implementa um subset
+ * de CSS: várias propriedades usadas na demo não existem lá. Cada bloco abaixo
+ * troca uma dessas propriedades por um equivalente que o UXP entende, sem
+ * alterar a geometria do Layout_De_Referência.
+ */
+
+/* ------------------------------------------------------------------ */
+/* Moldura: no Photoshop o painel é o próprio contêiner                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * `resize: both` não existe no UXP — quem redimensiona é o Photoshop.
+ * A largura passa a 100% do painel hospedeiro; a altura continua derivada
+ * de --u, preservando a razão 907/628. Se o painel do Photoshop for mais
+ * baixo, o conteúdo rola verticalmente.
+ */
+.panel {
+  width: 100%;
+  height: calc(907 * var(--u));
+  resize: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* O wrapper e a nota da demo não existem no painel do Photoshop */
+.demo-shell {
+  max-width: none;
+  margin: 0;
+}
+
+.demo-note {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* aspect-ratio não é suportado                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * `.wheel-stage` usava `aspect-ratio: 1 / 1`. Como o stage ocupa a largura
+ * inteira do painel (628 unidades de referência), a altura equivalente é
+ * exatamente 628 unidades. Fixar em --u é determinístico e dispensa tanto
+ * aspect-ratio quanto o truque de padding-bottom.
+ */
+.wheel-stage {
+  aspect-ratio: auto;
+  height: calc(628 * var(--u));
+}
+
+/* ------------------------------------------------------------------ */
+/* inset não é suportado: expande para as quatro bordas                */
+/* ------------------------------------------------------------------ */
+
+.arc {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.fg-prev {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* clip-path não é suportado                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A comparação nova/antiga usava um triângulo por clip-path. No UXP vira
+ * uma meia-lua vertical: mesma leitura visual (metade da cor anterior ao
+ * lado da atual), sem depender de clip-path.
+ */
+.fg-prev {
+  clip-path: none;
+  left: 50%;
+  width: 50%;
+  border-radius: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* :focus-visible tem suporte irregular: espelha em :focus             */
+/* ------------------------------------------------------------------ */
+
+.sat-btn:focus,
+.dial:focus,
+.track:focus,
+.value-track:focus,
+.tab:focus,
+.mode-btn:focus,
+.tool-btn:focus,
+.rot-btn:focus,
+.pal-btn:focus,
+.gode-tool:focus,
+.mask-kind:focus,
+.menu-btn:focus,
+#hexInput:focus,
+.num-field:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.layout-editing [data-layout]:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Guias de encaixe: div rotacionada em vez de SVG                     */
+/* ------------------------------------------------------------------ */
+
+.snap-guide {
+  pointer-events: none;
+  z-index: 40;
+}
+
+.snap-guide-arc {
+  opacity: 0.6;
+}
+
+.snap-guide-radial {
+  opacity: 0.6;
+}
+
+/* ------------------------------------------------------------------ */
+/* Janelas flutuantes não se aplicam dentro de um painel do Photoshop  */
+/* ------------------------------------------------------------------ */
+
+.float-window {
+  resize: none;
+}
+
+.detach-btn {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Fallback de input[type=range]                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Onde o runtime não renderiza o range nativo, o Platform Adapter injeta
+ * `.range-fallback`. O input original fica oculto, portando o valor.
+ */
+.range-fallback {
+  position: relative;
+  flex: 1;
+  height: 18px;
+  min-width: 60px;
+  border: 1px solid var(--divider);
+  border-radius: 2px;
+  background: var(--input-bg);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.range-fallback-thumb {
+  position: absolute;
+  top: -2px;
+  width: 6px;
+  height: 20px;
+  margin-left: -3px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, .6);
+  border-radius: 2px;
+  pointer-events: none;
+  left: 0;
+}

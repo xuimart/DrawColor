@@ -1,0 +1,20 @@
+{
+  "harmony.1": [572, 209],
+  "harmony.2": [572, 266],
+  "harmony.3": [572, 323],
+  "harmony.4": [572, 380],
+  "harmony.5": [572, 437],
+  "harmony.6": [572, 494],
+  "sat.gamutmask": [51, 345],
+  "sat.shape": [51, 266],
+  "hex.field": [68, 192.5],
+  "history.redo": [106.948, 551.878],
+  "history.undo": [49.077, 552.028],
+  "rail.dial.temperature": [386, 102],
+  "rail.dial.brightness": [459, 102],
+  "rail.lumlock": [313, 102],
+  "rail.valuecheck": [240, 102],
+  "swatch.fg": [72.996, 124.057],
+  "swatch.bg": [140, 132.007],
+  "swatch.swap": [123, 78]
+}

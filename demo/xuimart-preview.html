@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>DrawColor — Identidade Xuimart (Preview)</title>
+<style>
+:root {
+  /* Paleta Xuimart (do PADRAO_PLUGINS_XUIMART.md) */
+  --bg-dark: #0e0e14;
+  --bg-card: #181822;
+  --bg-panel: #20202e;
+  --accent: #de2246;
+  --success: #22c864;
+  --warning: #fbbf24;
+  --text-main: #f0f0ff;
+  --text-dim: #8c8ca5;
+  --border: #37374b;
+  --cyan-btn: #00c8c8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #1a1a1a;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px;
+  font-family: 'Segoe UI', sans-serif;
+  color: var(--text-main);
+}
+
+.ps-frame {
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  width: 325px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6);
+}
+
+.ps-titlebar {
+  background: var(--bg-panel);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ps-titlebar .title { font-weight: 600; color: var(--text-main); }
+
+.panel {
+  background: var(--bg-card);
+  padding: 8px;
+  position: relative;
+}
+
+/* Roda simulada */
+.wheel-area {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.wheel-placeholder {
+  width: 85%;
+  height: 85%;
+  border-radius: 50%;
+  background: conic-gradient(
+    hsl(0,100%,50%), hsl(60,100%,50%), hsl(120,100%,50%),
+    hsl(180,100%,50%), hsl(240,100%,50%), hsl(300,100%,50%), hsl(360,100%,50%)
+  );
+  position: relative;
+}
+.wheel-inner {
+  position: absolute;
+  top: 15%; left: 15%; right: 15%; bottom: 15%;
+  border-radius: 50%;
+  background: var(--bg-card);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.wheel-triangle {
+  width: 0; height: 0;
+  border-left: 50px solid transparent;
+  border-right: 50px solid transparent;
+  border-bottom: 90px solid;
+  border-bottom-color: var(--accent);
+  opacity: 0.3;
+}
+
+/* Satélites */
+.satellites {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.sat-btn {
+  position: absolute;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.sat-btn:hover { border-color: var(--accent); }
+.sat-btn svg { width: 14px; height: 14px; }
+
+/* Posições dos satélites (simuladas, proporcionais) */
+.sat-btn.mask   { top: 55%; left: 5%; }
+.sat-btn.shape  { top: 38%; left: 5%; }
+.sat-btn.lum    { top: 8%; left: 42%; }
+.sat-btn.value  { top: 8%; left: 30%; }
+.sat-btn.bright { top: 8%; right: 22%; }
+.sat-btn.temp   { top: 8%; right: 8%; }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  flex: 1;
+  padding: 6px 0;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 3px 3px 0 0;
+}
+.tab.active {
+  color: var(--text-main);
+  background: var(--bg-panel);
+  border-bottom: 2px solid var(--accent);
+}
+
+/* Sliders */
+.slider-section { padding: 8px 0; }
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.slider-label {
+  width: 14px;
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: right;
+}
+.slider-track {
+  flex: 1;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.slider-fill {
+  height: 100%;
+  border-radius: 1px;
+}
+.slider-num {
+  width: 28px;
+  font-size: 9px;
+  text-align: right;
+  color: var(--text-main);
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 2px 4px;
+}
+
+/* Mode buttons */
+.mode-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+.mode-label { font-size: 8px; color: var(--text-dim); margin-right: 4px; }
+.mode-btn {
+  font-size: 9px;
+  padding: 3px 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.mode-btn.active {
+  color: var(--text-main);
+  border-color: var(--border);
+  background: var(--bg-panel);
+}
+
+/* Footer */
+.footer {
+  padding: 8px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: var(--bg-dark);
+}
+.footer img {
+  height: 14px;
+  opacity: 0.7;
+}
+.footer-text {
+  font-size: 8px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+/* Hex */
+.hex-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+.hex-hash { font-size: 10px; color: var(--text-dim); }
+.hex-input {
+  width: 60px;
+  font-size: 10px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-main);
+  padding: 3px 6px;
+}
+
+/* Swatches */
+.swatch-area {
+  position: absolute;
+  top: 6px; left: 6px;
+}
+.fg-swatch {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: #de2246;
+}
+.bg-swatch {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #888;
+  position: absolute;
+  top: 24px; left: 20px;
+}
+</style>
+</head>
+<body>
+
+<div class="ps-frame">
+  <div class="ps-titlebar">
+    <span class="title">DrawColor</span>
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M4 6h16M4 12h16M4 18h16"/>
+    </svg>
+  </div>
+
+  <div class="panel">
+    <div class="wheel-area">
+      <div class="wheel-placeholder">
+        <div class="wheel-inner">
+          <div class="wheel-triangle"></div>
+        </div>
+      </div>
+
+      <div class="satellites">
+        <!-- Ícones SVG inline conforme padrão Xuimart -->
+        <div class="sat-btn mask" title="Máscara de gamut">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <ellipse cx="12" cy="12" rx="7" ry="4.5" transform="rotate(-25 12 12)"/>
+          </svg>
+        </div>
+        <div class="sat-btn shape" title="Forma do seletor">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12,3 22,20 2,20"/>
+          </svg>
+        </div>
+        <div class="sat-btn lum" title="Travar luminosidade">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+        </div>
+        <div class="sat-btn value" title="Conferir valores">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 2a10 10 0 0 1 0 20" fill="currentColor" opacity=".3"/>
+          </svg>
+        </div>
+        <div class="sat-btn bright" title="Brilho">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="8"/>
+            <line x1="12" y1="12" x2="12" y2="6"/>
+            <circle cx="12" cy="12" r="2" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="sat-btn temp" title="Temperatura">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="8"/>
+            <line x1="12" y1="12" x2="16" y2="8"/>
+            <circle cx="12" cy="12" r="2" fill="currentColor"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="swatch-area">
+        <div class="fg-swatch"></div>
+        <div class="bg-swatch"></div>
+      </div>
+    </div>
+
+    <div class="hex-row">
+      <span class="hex-hash">#</span>
+      <input class="hex-input" value="DE2246" readonly>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active">Sliders</button>
+      <button class="tab">Mixers</button>
+      <button class="tab">Paletas</button>
+      <button class="tab">Godê</button>
+    </div>
+
+    <div class="slider-section">
+      <div class="slider-row">
+        <span class="slider-label">H</span>
+        <div class="slider-track">
+          <div class="slider-fill" style="width:1%; background: linear-gradient(to right, red, yellow, lime, cyan, blue, magenta, red);"></div>
+        </div>
+        <span class="slider-num">348</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">S</span>
+        <div class="slider-track">
+          <div class="slider-fill" style="width:84%; background: linear-gradient(to right, #888, var(--accent));"></div>
+        </div>
+        <span class="slider-num">84</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">V</span>
+        <div class="slider-track">
+          <div class="slider-fill" style="width:87%; background: linear-gradient(to right, #000, var(--accent));"></div>
+        </div>
+        <span class="slider-num">87</span>
+      </div>
+    </div>
+
+    <div class="mode-row">
+      <span class="mode-label">MODE:</span>
+      <button class="mode-btn">RGB</button>
+      <button class="mode-btn active">HSV</button>
+      <button class="mode-btn">LAB</button>
+      <button class="mode-btn">CMYK</button>
+      <button class="mode-btn">B/W</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">xuimart.com.br</div>
+  </div>
+</div>
+
+</body>
+</html>

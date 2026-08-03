@@ -1,0 +1,15 @@
+# --- ltm-power ---
+ltm/store/*.jsonl
+ltm/runtime/*
+ltm/reports/*
+ltm/snapshots/*
+# --- /ltm-power ---
+
+# --- build ---
+# dist/ é gerado por build/build.js a partir de demo/ + uxp/ + cep/
+dist/
+node_modules/
+
+# --- local ---
+_backups/
+.kiro/settings/

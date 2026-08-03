@@ -1,0 +1,12 @@
+{
+  "name": "drawcolor-tests",
+  "private": true,
+  "description": "Property-based tests for DrawColor layout parity editor",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:verbose": "node --test --test-reporter=spec tests/*.test.js"
+  },
+  "devDependencies": {
+    "fast-check": "3.22.0"
+  }
+}
