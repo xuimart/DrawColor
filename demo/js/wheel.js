@@ -306,7 +306,9 @@ window.Wheel = (function () {
         const center = i * size;
         const a0 = (center - size / 2 - 90) * DEG;
         const a1 = (center + size / 2 - 90) * DEG;
-        const rgb = S.display(C.hsvToRgb(center, 100, 100));
+        // `center` é posição na roda; o matiz que ela representa depende do
+        // espaço escolhido (RGB ou a roda do pintor).
+        const rgb = S.display(C.hsvToRgb(S.angleToHue(center), 100, 100));
         c.beginPath();
         c.arc(CX, CY, OUTER_R, a0, a1, false);
         c.arc(CX, CY, INNER_R, a1, a0, true);
@@ -326,7 +328,7 @@ window.Wheel = (function () {
       for (let i = 0; i < 360; i++) {
         const a0 = (i - 90) * DEG;
         const a1 = (i + 1.2 - 90) * DEG;
-        const rgb = S.display(C.hsvToRgb(i, 100, 100));
+        const rgb = S.display(C.hsvToRgb(S.angleToHue(i), 100, 100));
         c.beginPath();
         c.arc(CX, CY, OUTER_R, a0, a1, false);
         c.arc(CX, CY, INNER_R, a1, a0, true);
@@ -407,9 +409,14 @@ window.Wheel = (function () {
 
   /* ================= Marcadores ================= */
 
-  // Posição de um matiz na tela, já considerando a rotação da roda
+  /**
+   * Posição de um matiz na tela, já considerando a rotação da roda.
+   * O matiz é convertido para posição na roda antes de virar ângulo: é o que
+   * mantém cada marcador em cima da faixa do anel que ele representa, nos dois
+   * espaços.
+   */
   function hueMarkerPos(hue, radius) {
-    const a = (hue + S.state.wheelRotation - 90) * DEG;
+    const a = (S.hueToAngle(hue) + S.state.wheelRotation - 90) * DEG;
     return { x: CX + radius * Math.cos(a), y: CY + radius * Math.sin(a) };
   }
 
@@ -654,7 +661,9 @@ window.Wheel = (function () {
     // evitando redesenhar 360 setores a cada grau girado
     const masked = S.state.gamut.enabled && S.state.shape === 'disc';
     const gray = S.state.valueCheck ? 'g' : 'c';
-    const ringKey = (limit.enabled ? 'q' + limit.hueSteps : 'continuous') + gray;
+    // O espaço entra na chave: trocar RGB por RYB reordena o anel inteiro.
+    const ringKey = (limit.enabled ? 'q' + limit.hueSteps : 'continuous')
+      + gray + S.state.wheelSpace;
     if (ringCacheKey !== ringKey) {
       ringCache = buildRing();
       ringCacheKey = ringKey;
@@ -673,7 +682,7 @@ window.Wheel = (function () {
     const maskKey = masked
       ? `${g.kind}|${g.cx.toFixed(3)}|${g.cy.toFixed(3)}|${g.rx.toFixed(3)}|${g.ry.toFixed(3)}|${Math.round(g.angle)}`
       : 'nomask';
-    const svKey = `${driver}|${svSteps}|${hueSteps}|${S.state.shape}|${S.state.wheelRotation}|${gray}|${maskKey}`;
+    const svKey = `${driver}|${svSteps}|${hueSteps}|${S.state.shape}|${S.state.wheelRotation}|${gray}|${maskKey}|${S.state.wheelSpace}`;
     if (svCacheKey !== svKey) {
       svCache = buildSelector(hsv, svSteps, hueSteps, masked);
       svCacheKey = svKey;
@@ -698,11 +707,19 @@ window.Wheel = (function () {
       drawMarker(outer, SEC_MARKER_R, S.displayCss(C.hsvToRgb(h, hsv.s, hsv.v)), SEC_MARKER_BORDER);
     });
 
-    // Marcador principal de matiz — maior, para distinção visual
-    const main = hueMarkerPos(hsv.h, midR);
-    drawLeader(main, hueMarkerPos(hsv.h, LEADER_INNER_R));
-    drawMarker(hueMarkerPos(hsv.h, LEADER_INNER_R), LEADER_HANDLE_R, null);
-    drawMarker(main, MAIN_MARKER_R, S.displayCss(C.hsvToRgb(hsv.h, 100, 100)), MAIN_MARKER_BORDER);
+    /**
+     * Marcador principal — maior, para distinção visual.
+     *
+     * Fica na ÂNCORA, não no matiz atual. Os dois coincidem quando o principal
+     * é o marcador ativo, que é o caso comum; quando o artista está pintando a
+     * partir de um secundário, o principal continua marcando de onde o esquema
+     * parte, e é isso que deixa a figura parada.
+     */
+    const refHue = S.getRefHue();
+    const main = hueMarkerPos(refHue, midR);
+    drawLeader(main, hueMarkerPos(refHue, LEADER_INNER_R));
+    drawMarker(hueMarkerPos(refHue, LEADER_INNER_R), LEADER_HANDLE_R, null);
+    drawMarker(main, MAIN_MARKER_R, S.displayCss(C.hsvToRgb(refHue, 100, 100)), MAIN_MARKER_BORDER);
 
     // Marcador da cor no seletor interno (Requisito 2.6)
     drawMarker(sh.hsvToPoint(hsv), SV_MARKER_R, null, SV_MARKER_BORDER);
@@ -738,17 +755,38 @@ window.Wheel = (function () {
     return ((deg % 360) + 360) % 360;
   }
 
+  /**
+   * Escolhe matiz no anel. Volta a ativar o marcador principal: arrastar no
+   * anel é o gesto de definir a cor base, e a constelação gira junto com ela.
+   */
   function applyRing(p) {
-    // Desconta a rotação da roda para chegar ao matiz real
-    const hue = screenAngle(p) - S.state.wheelRotation;
+    // Desconta a rotação para chegar à posição na roda, e daí ao matiz real
+    const angle = screenAngle(p) - S.state.wheelRotation;
+    const hue = S.angleToHue(angle);
     const hsv = S.getHsv();
+    // Volta ao principal e leva a âncora com ele: arrastar no anel é o gesto de
+    // definir a cor base, e a constelação gira junto.
+    S.setActiveMarker(null);
+    S.setRefHue(hue);
     S.setHsv({ h: hue, s: hsv.s, v: hsv.v });
   }
 
-  function applySv(p) {
+  /**
+   * Escolhe saturação e valor no seletor interno.
+   *
+   * Com Ctrl o matiz fica travado. Isso importa no disco, onde o matiz é
+   * angular e qualquer arraste o move junto: para ajustar só a saturação sem
+   * derrapar de cor, o artista segura Ctrl. No triângulo e no quadrado o matiz
+   * já não depende da posição, então o modificador não muda nada — e é
+   * justamente por isso que ele pode ser aplicado sem exceção por forma.
+   */
+  function applySv(p, evt) {
     const sh = shape();
     const q = sh.clamp(p.x, p.y);
-    S.setHsv(sh.pointToHsv(q.x, q.y, S.getHsv()));
+    const atual = S.getHsv();
+    const next = sh.pointToHsv(q.x, q.y, atual);
+    if (evt && evt.ctrlKey) next.h = atual.h;
+    S.setHsv(next);
   }
 
   /* ---------------- edição da máscara ---------------- */
@@ -888,23 +926,53 @@ window.Wheel = (function () {
   }
 
   /**
-   * Arrastar um marcador secundário abre ou fecha o esquema inteiro: todos os
-   * braços escalam pelo mesmo fator e a composição se mantém. É o gesto que o
-   * artista quer na maior parte do tempo — mexer um braço só desmancha a
-   * simetria que o esquema existe para garantir.
+   * Gira a constelação inteira até que o marcador agarrado fique sob o cursor,
+   * e adota a cor dele. Corpo rígido: só a orientação do conjunto muda.
+   */
+  function girarConjuntoPara(angle) {
+    const hsv = S.getHsv();
+    const index = rotateAnchor.index;
+    S.setActiveMarker(index);
+    S.rotateSetTo(angle, index);
+    S.setHsv({ h: S.angleToHue(angle), s: hsv.s, v: hsv.v });
+  }
+
+  /**
+   * Arrastar um marcador secundário.
    *
-   * Com Alt, o braço arrastado se move sozinho, para ajuste fino.
+   * O destino do gesto é decidido pelo PAPEL do braço, que o estado declara —
+   * não por uma lista de esquemas espalhada aqui. Antes esta função tinha um
+   * ramo por esquema, e foi assim que o acentuado escapou: ele caía no ajuste
+   * individual e o braço complementar saía dos 180°, desmanchando o acento.
    *
-   * O offset é relativo ao matiz principal, então o esquema editado continua
-   * acompanhando a cor quando o marcador principal se move.
+   *   'phi'   — braço de abertura: arrastar abre ou fecha o esquema, e a forma
+   *             se mantém por construção (a simetria do análogo, o complementar
+   *             do acentuado, a oposição dos eixos do tetrádico).
+   *   'fixed' — braço estrutural: não há abertura para ajustar, então arrastar
+   *             gira o conjunto inteiro mantendo o agarrado sob o cursor.
+   *   'free'  — esquemas sem φ: o offset do braço é solto.
+   *
+   * O offset é medido a partir da ÂNCORA, que é de onde os offsets partem.
    */
   function applyHarmonyDrag(p, evt) {
-    const hue = screenAngle(p) - S.state.wheelRotation;
-    let offset = hue - S.getHsv().h;
+    // Offsets de harmonia são ângulos na roda, então a conta toda acontece em
+    // posição de roda; o matiz só reaparece na hora de gravar a cor.
+    const angle = screenAngle(p) - S.state.wheelRotation;
+    let offset = angle - S.hueToAngle(S.getRefHue());
     if (evt.shiftKey) offset = Math.round(offset / 15) * 15;
 
-    if (evt.altKey) S.setHarmonyOffset(rotateAnchor.index, offset);
-    else S.spreadHarmony(rotateAnchor.index, offset);
+    switch (S.armRole(rotateAnchor.index)) {
+      case 'phi':
+        S.setHarmonyOffset(rotateAnchor.index, offset);
+        break;
+      case 'fixed':
+        girarConjuntoPara(angle);
+        break;
+      default:
+        // Sem φ declarado a forma é rígida: arrastar gira o conjunto.
+        girarConjuntoPara(angle);
+        break;
+    }
   }
 
   function onPointerDown(evt) {
@@ -949,7 +1017,7 @@ window.Wheel = (function () {
       applyRing(p);
     } else if (dist < INNER_R) {
       dragMode = 'sv';
-      applySv(p);
+      applySv(p, evt);
     } else {
       // Requisito 1.6: fora dos limites não altera nada
       return;
@@ -963,7 +1031,7 @@ window.Wheel = (function () {
     if (!dragMode) { updateMaskCursor(p, evt); return; }
 
     if (dragMode === 'ring') applyRing(p);
-    else if (dragMode === 'sv') applySv(p);
+    else if (dragMode === 'sv') applySv(p, evt);
     else if (dragMode === 'rotate') applyRotate(p, evt);
     else if (dragMode === 'mask') applyMaskDrag(p, evt);
     else if (dragMode === 'harmony') {
@@ -976,10 +1044,14 @@ window.Wheel = (function () {
   function onPointerUp(evt) {
     if (!dragMode) return;
 
-    // Clique seco num marcador secundário adota a cor daquele braço
+    /**
+     * Clique seco num marcador secundário adota a cor daquele braço. Quem
+     * decide o que acontece com a geometria é o estado: nos esquemas
+     * simétricos o conjunto fica parado e só troca qual marcador é o
+     * principal, em vez de o esquema inteiro girar sob o cursor.
+     */
     if (dragMode === 'harmony' && !rotateAnchor.moved) {
-      const hsv = S.getHsv();
-      S.setHsv({ h: rotateAnchor.hue, s: hsv.s, v: hsv.v }, { commit: true });
+      S.adoptHarmonyMarker(rotateAnchor.index);
     }
 
     // Girar a roda, editar a máscara e editar a harmonia não mudam a cor
@@ -988,6 +1060,24 @@ window.Wheel = (function () {
     rotateAnchor = null;
     if (canvas.hasPointerCapture(evt.pointerId)) canvas.releasePointerCapture(evt.pointerId);
     if (isColorChange) S.pushHistory();
+  }
+
+  /**
+   * Duplo clique em modo de edição devolve a máscara ao formato do rack,
+   * descartando os vértices movidos à mão.
+   *
+   * É o caminho de volta que faltava: depois de arrastar vários vértices não
+   * havia como recuperar a forma original sem restaurar a máscara inteira,
+   * perdendo também posição e tamanho, que costumam estar do jeito certo.
+   */
+  function onDoubleClick() {
+    const g = S.state.gamut;
+    if (!g.enabled || !g.editing || S.state.shape !== 'disc') return;
+    if (!S.hasCustomMask()) return;
+
+    S.resetMaskVertices();
+    invalidateCaches();
+    requestRender();
   }
 
   /* ================= Ícones de harmonia ================= */
@@ -1371,6 +1461,7 @@ window.Wheel = (function () {
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerUp);
+    canvas.addEventListener('dblclick', onDoubleClick);
 
     S.subscribe((st, reason) => {
       if (reason === 'shape' || reason === 'rotation' || reason === 'gamut') svCacheKey = null;

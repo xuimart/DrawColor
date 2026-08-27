@@ -142,7 +142,7 @@ window.PSBridge = (function () {
     if (!connected) return;
     lastPushed = rgb;
     // Janela em que ignoramos o polling: a escrita ainda está em trânsito.
-    suppressUntil = Date.now() + POLL_INTERVAL + 200;
+    suppressUntil = Date.now() + 1200;
 
     if (ps) writeForegroundUxp(rgb);
     else if (cs) writeForegroundCep(rgb);
@@ -151,10 +151,22 @@ window.PSBridge = (function () {
   function schedulePush() {
     if (!connected) return;
     if (writeTimer) clearTimeout(writeTimer);
+    // Suprimir polling durante o arrasto também
+    suppressUntil = Date.now() + 1200;
     writeTimer = setTimeout(function () {
       writeTimer = null;
       push(S.getRgb());
     }, WRITE_DEBOUNCE);
+  }
+
+  /**
+   * Push imediato sem debounce — usado no pointerup para garantir que
+   * a cor final seja gravada no Photoshop sem delay.
+   */
+  function pushNow() {
+    if (!connected) return;
+    if (writeTimer) { clearTimeout(writeTimer); writeTimer = null; }
+    push(S.getRgb());
   }
 
   /* ---------------- Polling de mudanças externas ---------------- */
@@ -179,7 +191,9 @@ window.PSBridge = (function () {
 
   function adopt(rgb) {
     if (!rgb) return;
-    if (Date.now() < suppressUntil && sameRgb(rgb, lastPushed)) return;
+    // Durante a janela de supressão, ignorar TODA leitura do host.
+    // Isso evita que o polling adote a cor antiga antes do push chegar.
+    if (Date.now() < suppressUntil) return;
     if (closeEnough(rgb, S.getRgb())) return;
     /**
      * `reason: HOST_REASON` marca a origem da mudança. AppState repassa esse
@@ -241,6 +255,7 @@ window.PSBridge = (function () {
     init: init,
     stop: stop,
     isConnected: isConnected,
-    push: push
+    push: push,
+    pushNow: pushNow
   };
 })();

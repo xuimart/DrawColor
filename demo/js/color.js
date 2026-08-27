@@ -225,6 +225,72 @@ window.Color = (function () {
     return Math.hypot(a.L - b.L, a.a - b.a, a.b - b.b);
   }
 
+  /* ---------------- Roda do artista (RYB) ---------------- */
+
+  /**
+   * Correspondência entre a posição na roda RYB e o matiz real em HSV.
+   *
+   * A roda RYB é a do pintor: as primárias são vermelho, amarelo e azul,
+   * igualmente espaçadas. A roda HSV é a da luz: vermelho, verde e azul. São
+   * rodas diferentes, e é isso que muda a teoria das cores — o complementar
+   * do vermelho é o VERDE no RYB e o ciano no HSV.
+   *
+   * A tabela dá o matiz HSV de cada um dos 12 matizes clássicos do círculo
+   * cromático RYB, de 30 em 30 graus:
+   *
+   *   0   vermelho          →   0
+   *   30  vermelho-laranja  →  15
+   *   60  laranja           →  30
+   *   90  amarelo-laranja   →  45
+   *   120 amarelo           →  60
+   *   150 amarelo-verde     →  90
+   *   180 verde             → 120
+   *   210 azul-verde        → 180
+   *   240 azul              → 240
+   *   270 azul-violeta      → 270
+   *   300 violeta           → 285
+   *   330 vermelho-violeta  → 330
+   *
+   * Entre dois pontos a correspondência é linear. A tabela é estritamente
+   * crescente, o que garante que a função tem inversa — condição necessária,
+   * porque a roda converte nos dois sentidos a cada quadro (posição do cursor
+   * para matiz, e matiz dos marcadores para posição na tela).
+   *
+   * Confira as três primárias e seus complementares, que é o teste que
+   * importa para o pintor:
+   *   vermelho (0)   ↔ verde (180)    → matizes HSV 0 e 120
+   *   amarelo (120)  ↔ violeta (300)  → matizes HSV 60 e 285
+   *   azul (240)     ↔ laranja (60)   → matizes HSV 240 e 30
+   */
+  const RYB_HUE_TABLE = [0, 15, 30, 45, 60, 90, 120, 180, 240, 270, 285, 330, 360];
+  const RYB_STEP = 360 / (RYB_HUE_TABLE.length - 1);   // 30°
+
+  const wrap360 = (deg) => ((deg % 360) + 360) % 360;
+
+  /** Posição na roda RYB (0-360) -> matiz HSV (0-360). */
+  function rybToHue(angle) {
+    const a = wrap360(angle);
+    const i = Math.min(Math.floor(a / RYB_STEP), RYB_HUE_TABLE.length - 2);
+    const t = (a - i * RYB_STEP) / RYB_STEP;
+    const hue = RYB_HUE_TABLE[i] + (RYB_HUE_TABLE[i + 1] - RYB_HUE_TABLE[i]) * t;
+    return wrap360(hue);
+  }
+
+  /** Matiz HSV (0-360) -> posição na roda RYB (0-360). Inversa de rybToHue. */
+  function hueToRyb(hue) {
+    const h = wrap360(hue);
+    for (let i = 0; i < RYB_HUE_TABLE.length - 1; i++) {
+      const lo = RYB_HUE_TABLE[i];
+      const hi = RYB_HUE_TABLE[i + 1];
+      if (h >= lo && h <= hi) {
+        // hi > lo sempre: a tabela é estritamente crescente.
+        const t = (h - lo) / (hi - lo);
+        return wrap360((i + t) * RYB_STEP);
+      }
+    }
+    return h;   // inalcançável: a tabela cobre [0, 360]
+  }
+
   /* ---------------- Mistura ---------------- */
 
   // Interpolação linear em RGB (Requisito 5.4)
@@ -244,6 +310,7 @@ window.Color = (function () {
     rgbToLab, labToRgb,
     rgbToCmyk, cmykToRgb,
     isOutOfGamut, clipToGamut, deltaE,
-    toGray, mixRgb
+    toGray, mixRgb,
+    rybToHue, hueToRyb, RYB_HUE_TABLE
   };
 })();

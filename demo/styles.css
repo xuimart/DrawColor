@@ -537,6 +537,88 @@ body {
   color: var(--text-dim);
 }
 
+/* Trial badge — shown inside status bar during trial period */
+.trial-badge {
+  display: inline-block;
+  background: var(--warn, #fbbf24);
+  color: #0e0e14;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* License overlay base styles */
+.dc-license-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(14, 14, 20, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.dc-overlay-card {
+  background: var(--surface-raised, #20202e);
+  border: 1px solid var(--divider, #37374b);
+  border-radius: 8px;
+  padding: 28px 24px;
+  max-width: 320px;
+  text-align: center;
+}
+
+.dc-overlay-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: var(--text-primary, #f0f0ff);
+}
+
+.dc-overlay-text {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: var(--text-dim, #8c8ca5);
+}
+
+.dc-overlay-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid var(--divider, #37374b);
+  border-radius: 4px;
+  background: var(--button-face, #2a2a3a);
+  color: var(--text-primary, #f0f0ff);
+  font-size: 12px;
+  cursor: pointer;
+}
+.dc-overlay-btn--primary {
+  background: var(--accent, #de2246);
+  border-color: var(--accent, #de2246);
+  color: #fff;
+}
+.dc-overlay-btn--sm {
+  padding: 4px 8px;
+  font-size: 10px;
+}
+
+.dc-overlay-machine-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+}
+.dc-overlay-machine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--divider, #37374b);
+  font-size: 11px;
+  color: var(--text-primary, #f0f0ff);
+}
+.dc-overlay-machine-name { flex: 1; text-align: left; }
+.dc-overlay-machine-date { margin: 0 8px; color: var(--text-dim, #8c8ca5); }
+
 /* Rodapé Xuimart — logo branca centralizada */
 .xuimart-footer {
   margin-top: 8px;
@@ -673,6 +755,40 @@ body {
 
 .menu-sub { padding-left: 6px; }
 .menu-sub[aria-disabled="true"] { opacity: .4; pointer-events: none; }
+
+/* ---------------- Limitar cores (bloco no painel) ---------------- */
+/* Estilo base (demo em fluxo). No painel real ele é reposicionado por
+   coordenadas na seção `.panel .limit-panel` mais abaixo. */
+.limit-panel {
+  margin: 8px 0 2px;
+  background: var(--surface-raised);
+  border: 1px solid var(--divider);
+  border-radius: 5px;
+  padding: 2px 4px 6px;
+}
+.limit-panel-head {
+  gap: 8px;
+  border-radius: 4px;
+}
+.limit-panel-head span:not(.limit-panel-count) { font-weight: 600; }
+.limit-panel-count {
+  margin-left: auto;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.limit-panel-rows { padding: 0 10px; display: flex; flex-direction: column; gap: 4px; }
+.limit-panel-rows[aria-disabled="true"] { opacity: .4; pointer-events: none; }
+.limit-panel-rows .menu-row { justify-content: flex-start; gap: 8px; }
+.limit-panel-rows .menu-label { flex: 1; color: var(--text-dim); }
+.limit-panel-rows select {
+  background: var(--bg-raised);
+  border: 1px solid var(--divider);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 3px 6px;
+  min-width: 82px;
+  font: inherit;
+}
 
 /* ---------------- rampa B/W ---------------- */
 .bw-block { margin-top: 10px; }
@@ -921,6 +1037,13 @@ body {
 .rot-btn:hover { background: var(--bg-raised-hi); }
 .rot-btn.wide { font-size: 10px; padding: 0 7px; }
 .rot-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+/* Seleção num par de botões que age como radiogroup (ex: círculo RGB/RYB). */
+.rot-btn.is-active {
+  border-color: var(--accent);
+  background: var(--bg-raised-hi);
+  color: var(--text-primary);
+  font-weight: 600;
+}
 
 .rotate-value {
   min-width: 40px;
@@ -1376,11 +1499,14 @@ body {
 }
 
 /* Barra de valor: só existe no formato disco e não consta da referência.
-   Fica na faixa livre logo abaixo da roda. */
+   Fica na faixa livre entre a base da roda e o início da faixa de baixo, e é
+   ancorada pela BASE nesse início — assim ela acompanha a faixa em vez de
+   cruzar com o bloco "Limitar cores" quando o painel encolhe. */
 .panel .value-bar {
   position: absolute;
   left: calc(41 * var(--u));
-  top: calc(588 * var(--u));
+  top: auto;
+  bottom: calc(100% - var(--strip-top) + max(4px, calc(6 * var(--u))));
   width: calc(430 * var(--u));
   margin: 0;
 }
@@ -1394,6 +1520,60 @@ body {
   border-radius: 0;
   background: #fff;
   box-shadow: 0 0 0 calc(1 * var(--u)) rgba(0, 0, 0, .8);
+}
+
+/* Bloco "Limitar cores": canto inferior direito da roda, logo abaixo dos
+   satélites de forma e acima da linha das abas. Ancorado por coordenadas no
+   Reference_Space como os demais elementos do painel. */
+/* Faixa livre entre a base da roda (y≈565) e as abas (y=619): cabe uma linha.
+   O bloco é uma tira horizontal do tamanho do conteúdo e centralizada — não se
+   estica de ponta a ponta, não invade a roda e não é cortado pelas abas. */
+.panel .limit-panel {
+  position: absolute;
+  left: 50%;
+  /* Primeira linha da faixa de baixo, logo acima das abas. Ancorado pelo TOPO,
+     como as demais linhas: é o que impede a faixa de subir por cima da roda
+     quando o painel encolhe. A altura é reservada em --limit-h, então o bloco
+     nunca precisa roubar espaço de ninguém. */
+  top: var(--strip-top);
+  bottom: auto;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(600 * var(--u));
+  height: var(--limit-h);
+  margin: 0;
+  padding: 0 calc(14 * var(--u));
+  border-radius: calc(15 * var(--u));
+  background: var(--surface-raised);
+  border: calc(1 * var(--u)) solid var(--divider);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(12 * var(--u));
+  z-index: 6;
+  pointer-events: auto;
+  font-size: max(11px, calc(12 * var(--u)));
+}
+/* Um filete separa o interruptor dos seletores, agrupando visualmente. */
+.panel .limit-panel-head {
+  padding: 0 calc(12 * var(--u)) 0 0;
+  gap: calc(6 * var(--u));
+  flex: none;
+  border-right: calc(1 * var(--u)) solid var(--divider);
+}
+.panel .limit-panel-count { display: none; }
+.panel .limit-panel-rows {
+  flex-direction: row;
+  align-items: center;
+  padding: 0;
+  gap: calc(12 * var(--u));
+}
+.panel .limit-panel-rows .menu-row { padding: 0; gap: calc(6 * var(--u)); width: auto; }
+.panel .limit-panel-rows .menu-label { flex: none; color: var(--text-dim); font-size: max(11px, calc(12 * var(--u))); }
+.panel .limit-panel-rows select {
+  min-width: calc(56 * var(--u));
+  padding: calc(2 * var(--u)) calc(5 * var(--u));
+  font: inherit;
 }
 
 /* ---------------- abas (Requisitos 5.2, 5.3) ---------------- */
@@ -1709,8 +1889,22 @@ body {
    * É o mesmo 608 que layout.js usa como TOP_REFERENCE_HEIGHT para decidir
    * a escala — os dois descrevem a mesma faixa e precisam concordar.
    */
+  /**
+   * Altura da linha do bloco "Limitar cores", com piso em px como as outras
+   * linhas da faixa: o conteúdo dele (interruptor e dois seletores) não encolhe
+   * abaixo de um certo tamanho legível.
+   *
+   * Ele entra em --strip-h justamente por causa desse piso. Antes o bloco era
+   * ancorado ao topo das abas e crescia para cima, ocupando a faixa livre entre
+   * a base da roda e as abas. Essa faixa mede (608 − 565) × escala, então
+   * encolhe junto com o painel — mas o bloco não, e num painel estreito ele
+   * subia por cima da roda. Reservando a linha, a faixa de baixo cresce e a
+   * roda nunca é invadida.
+   */
+  --limit-h: max(24px, calc(30 * var(--u)));
+
   --top-h:   calc(608 * var(--u));
-  --strip-h: calc(var(--tab-h) + var(--body-h) + var(--status-h));
+  --strip-h: calc(var(--limit-h) + var(--tab-h) + var(--body-h) + var(--status-h));
 
   /**
    * Onde a faixa de baixo começa.
@@ -1765,7 +1959,7 @@ body {
 /* Ancorada por `top`, não por `bottom`: é isso que impede a faixa de subir
    por cima da roda quando o painel é baixo. Ver `--strip-top`. */
 .panel .tabs {
-  top: var(--strip-top);
+  top: calc(var(--strip-top) + var(--limit-h));
   bottom: auto;
   height: var(--tab-h);
   display: flex;
@@ -1813,7 +2007,7 @@ body {
    Antes havia uma classe .sliders-active que travava height/bottom; agora o JS
    é a única fonte de verdade para --body-h. */
 .panel .tab-body {
-  top: calc(var(--strip-top) + var(--tab-h));
+  top: calc(var(--strip-top) + var(--limit-h) + var(--tab-h));
   bottom: auto;
   height: var(--body-h);
   background: var(--panel-bg);
@@ -2013,9 +2207,128 @@ body {
 
 /* ---------------- status ---------------- */
 .panel .status-bar {
-  top: calc(var(--strip-top) + var(--tab-h) + var(--body-h));
+  top: calc(var(--strip-top) + var(--limit-h) + var(--tab-h) + var(--body-h));
   bottom: auto;
   height: var(--status-h);
   padding: max(5px, calc(9 * var(--u))) var(--pad-x) 0;
   overflow: hidden;
+}
+
+
+/* ================================================================
+ * Overlay de Licenciamento (overlay.js)
+ *
+ * Camada de bloqueio full-viewport sobre o plugin quando a licença
+ * não é válida. Criada dinamicamente pelo overlay.js.
+ * ================================================================ */
+
+.dc-license-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.dc-overlay-card {
+  background: var(--surface-raised, #20202e);
+  border: 1px solid var(--divider, #37374b);
+  border-radius: 8px;
+  padding: 32px 28px;
+  max-width: 360px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+.dc-overlay-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #f0f0ff);
+}
+
+.dc-overlay-text {
+  margin: 0 0 20px;
+  font-size: 12px;
+  color: var(--text-dim, #8c8ca5);
+  line-height: 1.5;
+}
+
+.dc-overlay-btn {
+  display: inline-block;
+  padding: 8px 20px;
+  border: 1px solid var(--divider, #37374b);
+  border-radius: 4px;
+  background: var(--button-face, #2a2a3a);
+  color: var(--text-primary, #f0f0ff);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.dc-overlay-btn:hover {
+  background: var(--button-face-end, #20202e);
+  border-color: var(--text-dim, #8c8ca5);
+}
+
+.dc-overlay-btn:focus-visible {
+  outline: 2px solid var(--focus, #de2246);
+  outline-offset: 2px;
+}
+
+.dc-overlay-btn--primary {
+  background: var(--accent, #de2246);
+  border-color: var(--accent, #de2246);
+  color: #fff;
+  font-weight: 600;
+}
+
+.dc-overlay-btn--primary:hover {
+  background: #c41e3e;
+  border-color: #c41e3e;
+}
+
+.dc-overlay-btn--sm {
+  padding: 4px 10px;
+  font-size: 10px;
+}
+
+/* Lista de máquinas (estado machine_limit) */
+.dc-overlay-machine-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dc-overlay-machine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--divider, #37374b);
+}
+
+.dc-overlay-machine:last-child {
+  border-bottom: none;
+}
+
+.dc-overlay-machine-name {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-primary, #f0f0ff);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-overlay-machine-date {
+  font-size: 10px;
+  color: var(--text-dim, #8c8ca5);
+  white-space: nowrap;
 }

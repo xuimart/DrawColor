@@ -23,6 +23,10 @@ const DIST = path.join(ROOT, 'dist');
  *  window.Platform durante a própria definição. */
 const CORE_SCRIPTS = [
   'platform.js',
+  'fingerprint.js',
+  'overlay.js',
+  'oauth-server.js',
+  'license.js',
   'color.js',
   'state.js',
   'layout.js',

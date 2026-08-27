@@ -427,66 +427,83 @@ window.Panels = (function () {
 
   /* ================= Limitação de cor ================= */
 
+  // O controle de limite de cor aparece em dois lugares: no menu ☰ e num bloco
+  // fixo do painel, embaixo da roda. Ambos usam as mesmas classes js-limit-*, e
+  // estas funções percorrem todas as instâncias para mantê-las sincronizadas.
   function initLimit() {
-    const enabled = document.getElementById('limitEnabled');
-    const hueSel = document.getElementById('limitHueSteps');
-    const svSel = document.getElementById('limitSvSteps');
+    const enableds = document.querySelectorAll('.js-limit-enabled');
+    const hueSels = document.querySelectorAll('.js-limit-hue');
+    const svSels = document.querySelectorAll('.js-limit-sv');
 
-    S.HUE_STEP_OPTIONS.forEach((n) => {
-      const opt = document.createElement('option');
-      opt.value = String(n);
-      opt.textContent = n;
-      if (n === S.state.limit.hueSteps) opt.selected = true;
-      hueSel.appendChild(opt);
-    });
-
-    [['0', 'livre'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['8', '8'], ['10', '10']]
-      .forEach(([value, label]) => {
+    hueSels.forEach((hueSel) => {
+      S.HUE_STEP_OPTIONS.forEach((n) => {
         const opt = document.createElement('option');
-        opt.value = value;
-        opt.textContent = label;
-        if (Number(value) === S.state.limit.svSteps) opt.selected = true;
-        svSel.appendChild(opt);
+        opt.value = String(n);
+        opt.textContent = n;
+        if (n === S.state.limit.hueSteps) opt.selected = true;
+        hueSel.appendChild(opt);
       });
-
-    enabled.checked = S.state.limit.enabled;
-
-    enabled.addEventListener('change', () => {
-      S.setLimit({ enabled: enabled.checked });
-      window.Wheel.invalidateCaches();
-      window.Wheel.requestRender();
-      S.pushHistory();
+      hueSel.addEventListener('change', () => {
+        S.setLimit({ hueSteps: Number(hueSel.value) });
+        window.Wheel.invalidateCaches();
+        window.Wheel.requestRender();
+      });
     });
 
-    hueSel.addEventListener('change', () => {
-      S.setLimit({ hueSteps: Number(hueSel.value) });
-      window.Wheel.invalidateCaches();
-      window.Wheel.requestRender();
+    svSels.forEach((svSel) => {
+      [['0', 'livre'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', '6'], ['8', '8'], ['10', '10']]
+        .forEach(([value, label]) => {
+          const opt = document.createElement('option');
+          opt.value = value;
+          opt.textContent = label;
+          if (Number(value) === S.state.limit.svSteps) opt.selected = true;
+          svSel.appendChild(opt);
+        });
+      svSel.addEventListener('change', () => {
+        S.setLimit({ svSteps: Number(svSel.value) });
+        window.Wheel.invalidateCaches();
+        window.Wheel.requestRender();
+      });
     });
 
-    svSel.addEventListener('change', () => {
-      S.setLimit({ svSteps: Number(svSel.value) });
-      window.Wheel.invalidateCaches();
-      window.Wheel.requestRender();
+    enableds.forEach((enabled) => {
+      enabled.checked = S.state.limit.enabled;
+      enabled.addEventListener('change', () => {
+        S.setLimit({ enabled: enabled.checked });
+        window.Wheel.invalidateCaches();
+        window.Wheel.requestRender();
+        S.pushHistory();
+      });
     });
   }
 
   function refreshLimit() {
     const limit = S.state.limit;
-    document.getElementById('limitControls')
-      .setAttribute('aria-disabled', String(!limit.enabled));
 
-    const countEl = document.getElementById('limitCount');
-    if (!limit.enabled) {
-      countEl.textContent = 'cor contínua';
-      return;
-    }
+    document.querySelectorAll('.js-limit-enabled').forEach((el) => {
+      el.checked = limit.enabled;
+    });
+    document.querySelectorAll('.js-limit-hue').forEach((el) => {
+      el.value = String(limit.hueSteps);
+    });
+    document.querySelectorAll('.js-limit-sv').forEach((el) => {
+      el.value = String(limit.svSteps);
+    });
+    document.querySelectorAll('.js-limit-controls').forEach((el) => {
+      el.setAttribute('aria-disabled', String(!limit.enabled));
+    });
+
     const total = limit.svSteps >= 2
       ? limit.hueSteps * limit.svSteps * limit.svSteps
       : null;
-    countEl.textContent = total
-      ? `${limit.hueSteps} matizes × ${limit.svSteps} tons ≈ ${total} cores`
-      : `${limit.hueSteps} matizes`;
+    const text = !limit.enabled
+      ? 'cor contínua'
+      : (total
+        ? `${limit.hueSteps} matizes × ${limit.svSteps} tons ≈ ${total} cores`
+        : `${limit.hueSteps} matizes`);
+    document.querySelectorAll('.js-limit-count').forEach((el) => {
+      el.textContent = text;
+    });
   }
 
   function buildModeButtons() {

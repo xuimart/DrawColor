@@ -27,6 +27,15 @@
 
       <div class="panel-menu" id="panelMenu" role="menu" hidden>
         <p class="menu-group">Roda</p>
+        <div class="menu-row" role="radiogroup" aria-label="Espaço do círculo cromático">
+          <span class="menu-label">Círculo</span>
+          <button type="button" id="spaceRgb" class="rot-btn wide" role="radio" aria-checked="true"
+                  title="Roda da luz (RGB): o complementar do vermelho é o ciano">RGB</button>
+          <button type="button" id="spaceRyb" class="rot-btn wide" role="radio" aria-checked="false"
+                  title="Roda do pintor (RYB): o complementar do vermelho é o verde">RYB</button>
+        </div>
+        <p class="menu-hint" id="spaceHint"></p>
+
         <div class="menu-row" role="group" aria-label="Rotação da roda">
           <span class="menu-label">Rotação</span>
           <button type="button" id="rotMinus" class="rot-btn" aria-label="Girar 15° à esquerda">−</button>
@@ -38,20 +47,20 @@
 
         <hr class="menu-sep">
 
-        <label class="menu-check">
-          <input type="checkbox" id="limitEnabled">
+        <label class="menu-check js-limit">
+          <input type="checkbox" id="limitEnabled" class="js-limit-enabled">
           <span>Limitar cores</span>
         </label>
-        <div class="menu-sub" id="limitControls">
+        <div class="menu-sub js-limit-controls" id="limitControls">
           <div class="menu-row">
             <span class="menu-label">Matizes</span>
-            <select id="limitHueSteps" aria-label="Quantidade de matizes"></select>
+            <select id="limitHueSteps" class="js-limit-hue" aria-label="Quantidade de matizes"></select>
           </div>
           <div class="menu-row">
             <span class="menu-label">Tons</span>
-            <select id="limitSvSteps" aria-label="Quantidade de níveis de saturação e valor"></select>
+            <select id="limitSvSteps" class="js-limit-sv" aria-label="Quantidade de níveis de saturação e valor"></select>
           </div>
-          <p class="menu-hint" id="limitCount"></p>
+          <p class="menu-hint js-limit-count" id="limitCount"></p>
         </div>
 
         <hr class="menu-sep">
@@ -118,6 +127,8 @@
           <button type="button" id="gamutReset" class="rot-btn wide">Restaurar máscara</button>
           <button type="button" id="gamutResetShape" class="rot-btn wide"
                   title="Volta ao formato do rack, mantendo posição e tamanho">Restaurar forma</button>
+          <button type="button" id="gamutCenter" class="rot-btn wide"
+                  title="Traz a máscara para o centro do disco, mantendo formato e tamanho">Centralizar</button>
         </div>
         <p class="menu-hint">
           Em edição, arraste os vértices brancos para moldar a máscara ·
@@ -237,6 +248,25 @@
       <div class="hex-row" id="hexRow" data-layout="hex.field">
         <span class="hex-hash">#</span>
         <input type="text" id="hexInput" maxlength="7" spellcheck="false" aria-label="Valor hexadecimal da cor">
+      </div>
+    </div>
+
+    <!-- ================= LIMITAR CORES (no painel) ================= -->
+    <div class="limit-panel js-limit" id="limitPanel">
+      <label class="limit-panel-head menu-check">
+        <input type="checkbox" class="js-limit-enabled">
+        <span>Limitar cores</span>
+        <span class="limit-panel-count js-limit-count"></span>
+      </label>
+      <div class="limit-panel-rows js-limit-controls">
+        <div class="menu-row">
+          <span class="menu-label">Matizes</span>
+          <select class="js-limit-hue" aria-label="Quantidade de matizes"></select>
+        </div>
+        <div class="menu-row">
+          <span class="menu-label">Tons</span>
+          <select class="js-limit-sv" aria-label="Quantidade de níveis de saturação e valor"></select>
+        </div>
       </div>
     </div>
 
@@ -495,6 +525,10 @@
 </div>
 
 <script src="js/platform.js"></script>
+<script src="js/fingerprint.js"></script>
+<script src="js/overlay.js"></script>
+<script src="js/oauth-server.js"></script>
+<script src="js/license.js"></script>
 <script src="js/color.js"></script>
 <script src="js/state.js"></script>
 <script src="js/layout.js"></script>

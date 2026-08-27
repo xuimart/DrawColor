@@ -305,12 +305,23 @@ describe('Escala uniforme dos controles ancorados', function() {
    * satélites. Ancorada pelo topo com `max()`, ela nunca sobe acima da roda.
    */
   it('a faixa de baixo é ancorada pelo topo, nunca pelo rodapé', function() {
+    /**
+     * A pilha da faixa, de cima para baixo: o bloco "Limitar cores", as abas, o
+     * corpo e o status. Cada linha começa onde a anterior termina, e todas
+     * ancoram pelo topo.
+     *
+     * O bloco entrou nessa pilha porque antes flutuava na faixa livre entre a
+     * base da roda e as abas. Essa faixa encolhe com a escala e o bloco tem
+     * piso em px, então num painel estreito ele crescia por cima da roda. Com
+     * linha reservada isso não acontece.
+     */
     var alvos = [
-      { seletor: '.panel .tabs', esperado: 'var(--strip-top)', bottom: 'auto' },
+      { seletor: '.panel .limit-panel', esperado: 'var(--strip-top)', bottom: 'auto' },
+      { seletor: '.panel .tabs', esperado: 'calc(var(--strip-top) + var(--limit-h))', bottom: 'auto' },
       // tab-body agora usa height: --body-h com bottom: auto SEMPRE.
       // O JS (measureBodyHeight) ajusta --body-h para caber o pane ativo.
-      { seletor: '.panel .tab-body', esperado: 'calc(var(--strip-top) + var(--tab-h))', bottom: 'auto' },
-      { seletor: '.panel .status-bar', esperado: 'calc(var(--strip-top) + var(--tab-h) + var(--body-h))' , bottom: 'auto' }
+      { seletor: '.panel .tab-body', esperado: 'calc(var(--strip-top) + var(--limit-h) + var(--tab-h))', bottom: 'auto' },
+      { seletor: '.panel .status-bar', esperado: 'calc(var(--strip-top) + var(--limit-h) + var(--tab-h) + var(--body-h))' , bottom: 'auto' }
     ];
 
     alvos.forEach(function(alvo) {
@@ -354,6 +365,35 @@ describe('Escala uniforme dos controles ancorados', function() {
           var stripTop = Math.max(topH, panelH - stripH);
           // A faixa começa em stripTop; a roda ocupa de 0 a topH
           return stripTop >= topH - 1e-9;
+        }
+      ),
+      { numRuns: 200 }
+    );
+  });
+
+  it('o bloco "Limitar cores" nunca entra na área da roda', function() {
+    /**
+     * O bloco é a primeira linha da faixa, então começa exatamente em
+     * --strip-top. Como a roda termina em 565 × escala e --strip-top nunca
+     * resolve abaixo de 608 × escala, sobra folga em qualquer tamanho de painel.
+     *
+     * Este teste existe porque antes o bloco flutuava na faixa livre entre os
+     * dois, ancorado ao topo das abas. Essa faixa mede (608 − 565) × escala e
+     * encolhe com o painel, mas a altura do bloco tem piso em px — num painel
+     * estreito ele crescia para cima e cobria a base da roda.
+     */
+    var BASE_DA_RODA = 565;   // centro em 352 + raio externo 213
+
+    fc.assert(
+      fc.property(
+        fc.double({ min: 200, max: 2000, noNaN: true }),   // altura do painel
+        fc.double({ min: 100, max: 400, noNaN: true }),    // altura da faixa
+        fc.double({ min: 0.55, max: 1, noNaN: true }),     // escala
+        function(panelH, stripH, escala) {
+          var topH = 608 * escala;
+          var stripTop = Math.max(topH, panelH - stripH);
+          var topoDoBloco = stripTop;
+          return topoDoBloco >= BASE_DA_RODA * escala - 1e-9;
         }
       ),
       { numRuns: 200 }

@@ -450,6 +450,18 @@
 
     document.getElementById('gamutReset').addEventListener('click', () => S.resetGamut());
 
+    /**
+     * Traz a máscara de volta ao centro do disco sem tocar em formato, tamanho
+     * ou rotação. Uma máscara arrastada para a borda fica difícil de recuperar
+     * à mão, e restaurar tudo custaria o ajuste de forma que já estava bom.
+     */
+    document.getElementById('gamutCenter').addEventListener('click', () => {
+      if (S.state.gamut.locked) return;
+      S.setGamut({ cx: 0, cy: 0 });
+      W.invalidateCaches();
+      W.requestRender();
+    });
+
     // Desfaz só a figura editada: posição, tamanho e rotação ficam.
     document.getElementById('gamutResetShape').addEventListener('click', () => {
       S.resetMaskVertices();
@@ -592,6 +604,39 @@
     document.getElementById('valueTrack').setAttribute('aria-valuenow', String(Math.round(v)));
   }
 
+  /* ---------------- Espaço do círculo cromático (RGB / RYB) ---------------- */
+
+  /**
+   * Trocar de roda reordena o anel inteiro e move todos os marcadores, então os
+   * caches de desenho precisam ser descartados — sem isso o anel continuaria
+   * mostrando a ordem antiga com os marcadores já nas posições novas.
+   */
+  function initWheelSpace() {
+    const aplicar = (id) => {
+      S.setWheelSpace(id);
+      window.Wheel.invalidateCaches();
+      window.Wheel.requestRender();
+    };
+
+    document.getElementById('spaceRgb').addEventListener('click', () => aplicar('rgb'));
+    document.getElementById('spaceRyb').addEventListener('click', () => aplicar('ryb'));
+  }
+
+  function refreshWheelSpace() {
+    const ryb = S.state.wheelSpace === 'ryb';
+    const rgbBtn = document.getElementById('spaceRgb');
+    const rybBtn = document.getElementById('spaceRyb');
+
+    rgbBtn.classList.toggle('is-active', !ryb);
+    rybBtn.classList.toggle('is-active', ryb);
+    rgbBtn.setAttribute('aria-checked', String(!ryb));
+    rybBtn.setAttribute('aria-checked', String(ryb));
+
+    document.getElementById('spaceHint').textContent = ryb
+      ? 'Roda do pintor: vermelho, amarelo e azul como primárias'
+      : 'Roda da luz: vermelho, verde e azul como primárias';
+  }
+
   /* ---------------- Rotação da roda ---------------- */
 
   function initRotation() {
@@ -663,17 +708,35 @@
       ? ` · máscara${S.state.gamut.locked ? ' travada' : ''}`
       : '';
     const vc = S.state.valueCheck ? ' · valores' : '';
+    // Só aparece na roda do pintor: o RGB é o padrão e não precisa de aviso.
+    const space = S.state.wheelSpace === 'ryb' ? ' · roda RYB' : '';
     const shapeName = { triangle: 'triângulo', square: 'quadrado', disc: 'disco' }[S.state.shape];
 
     document.getElementById('statusBar').textContent =
       `Demo offline · H ${Math.round(hsv.h)}° S ${Math.round(hsv.s)}% V ${Math.round(hsv.v)}% · ` +
-      `RGB ${rgb.r},${rgb.g},${rgb.b}${limit}${rot}${lum}${mask}${vc} · ` +
+      `RGB ${rgb.r},${rgb.g},${rgb.b}${limit}${rot}${lum}${mask}${vc}${space} · ` +
       `${shapeName} · histórico ${S.state.historyIndex + 1}/${S.state.history.length}`;
   }
 
   /* ---------------- Boot ---------------- */
 
-  function init() {
+  /** Tracks whether interactive modules (wheel, panels, etc.) have been initialized. */
+  var interactiveInitDone = false;
+
+  /**
+   * Statuses that allow the plugin to run interactively.
+   * All others block the UI via the Overlay.
+   */
+  var ALLOWED_STATUSES = { trial: true, active: true, offline_grace: true };
+
+  /**
+   * Initializes all interactive modules (wheel, panels, tabs, etc.).
+   * Should only be called when the license status allows it.
+   */
+  function initInteractive() {
+    if (interactiveInitDone) return;
+    interactiveInitDone = true;
+
     initSwatches();
     initMenu();
     initShape();
@@ -682,6 +745,7 @@
     initGamut();
     initHarmonyEdit();
     initValueBar();
+    initWheelSpace();
     initRotation();
     initTabs();
     initHistory();
@@ -729,6 +793,7 @@
       refreshValueCheck();
       refreshGamutMask();
       refreshValueBar();
+      refreshWheelSpace();
       refreshRotation();
       refreshHistoryButtons();
       refreshStatus();
@@ -766,6 +831,67 @@
 
     // Verifica se há atualização disponível no GitHub (uma vez por sessão).
     checkForUpdate();
+  }
+
+  /* ---------------- License status handling ---------------- */
+
+  /**
+   * Updates the status bar to show trial days remaining.
+   * @param {number|null} daysLeft
+   */
+  function showTrialBadge(daysLeft) {
+    // Remove existing badge if any
+    var existing = document.getElementById('trialBadge');
+    if (existing) existing.parentNode.removeChild(existing);
+
+    if (daysLeft === null || daysLeft === undefined) return;
+
+    var badge = document.createElement('div');
+    badge.id = 'trialBadge';
+    badge.style.cssText = 'background:#de2246;color:#fff;text-align:center;padding:3px 8px;font-size:10px;font-weight:500;cursor:pointer;line-height:1.4;position:fixed;top:0;left:0;right:0;z-index:9999;';
+    badge.innerHTML = daysLeft + (daysLeft === 1 ? ' dia restante' : ' dias restantes')
+      + ' · <u>Comprar licença</u>';
+    badge.addEventListener('click', function () {
+      window.open('https://buy.stripe.com/test_14A5kxfcUd386Nr3Pr3cc00', '_blank');
+    });
+
+    document.body.appendChild(badge);
+  }
+
+  /**
+   * Handles license status changes. Called when License.onStatusChange fires.
+   * @param {string} status
+   */
+  function handleLicenseStatus(status) {
+    if (ALLOWED_STATUSES[status]) {
+      // License is valid — hide overlay and initialize interactive modules
+      if (window.Overlay && window.Overlay.isVisible()) {
+        window.Overlay.hide();
+      }
+      initInteractive();
+
+      // Show trial badge if applicable
+      if (status === 'trial' && window.License) {
+        showTrialBadge(window.License.getDaysLeft());
+      } else {
+        showTrialBadge(null);
+      }
+    } else {
+      // License blocks usage — overlay is shown by License module itself.
+      // Remove trial badge if it was visible.
+      showTrialBadge(null);
+    }
+  }
+
+  /**
+   * Main initialization entry point.
+   * Calls License.init() first to gate interactive module initialization
+   * behind a valid license check.
+   */
+  function init() {
+    // LICENSE DISABLED — skip license check, init directly
+    // TODO: Re-enable when OAuth + badge click issues are resolved
+    initInteractive();
   }
 
   /* ---------------- Verificação de atualização ---------------- */

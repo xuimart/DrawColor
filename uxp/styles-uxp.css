@@ -147,6 +147,24 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
+/* Bloco "Limitar cores": max-content e translateX têm suporte         */
+/* irregular no UXP. Fixa a largura e centraliza pelo `left`.          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A demo usa `width: max-content` + `transform: translateX(-50%)` para uma
+ * tira do tamanho do conteúdo, centralizada. No UXP nenhum dos dois é
+ * confiável, então fixamos a largura (≈ 380 unidades cabem checkbox +
+ * Matizes + Tons) e centralizamos por `left = (628 - 380) / 2`.
+ */
+.panel .limit-panel {
+  width: calc(380 * var(--u));
+  max-width: none;
+  left: calc(124 * var(--u));
+  transform: none;
+}
+
+/* ------------------------------------------------------------------ */
 /* Fallback de input[type=range]                                       */
 /* ------------------------------------------------------------------ */
 

@@ -41,6 +41,169 @@ window.AppState = (function () {
    */
   const MIN_HARMONY_GAP = 12;
 
+  /**
+   * Abertura máxima de cada braço nos esquemas análogo e análogo acentuado.
+   *
+   * 90° é o teto natural: nele os dois braços ficam a ±90° do matiz principal e
+   * formam uma LINHA RETA, com 180° de abertura entre eles. Passando disso a
+   * figura se dobra para trás — os braços voltariam a se aproximar pelo outro
+   * lado, e a abertura medida a partir do principal passaria de meia volta, o
+   * que não tem leitura composicional.
+   *
+   * Já tentei 60° aqui, seguindo um comentário que dizia ser o valor do
+   * Coolorus. Foi um aperto que ninguém pediu e que tirou justamente a abertura
+   * ampla do análogo acentuado — onde os quatro marcadores em 0, ±90 e 180
+   * distribuem o círculo por igual. O teto geométrico é melhor critério que uma
+   * anotação não verificada.
+   */
+  const MAX_ANALOG_SPREAD = 90;
+
+  /**
+   * Abertura máxima para o tetrádico. O offset canônico é 90° e o Coolorus
+   * permite range [10°, 80°]. Limitar impede que o retângulo se desfaça
+   * num "sanduíche" achatado demais ou excessivamente aberto.
+   */
+  const MAX_TETRA_SPREAD = 80;
+
+  /**
+   * Tetrádico como DOIS EIXOS COMPLEMENTARES.
+   *
+   * O esquema é um retângulo: dois pares de complementares. O primeiro eixo é
+   * o matiz principal e seu oposto (0 e 180) e fica parado — é a referência da
+   * composição. O segundo eixo é φ e 180+φ, e gira em bloco: arrastar um de
+   * seus marcadores abre ou fecha o ângulo entre os eixos, mantendo os dois
+   * pontos sempre opostos.
+   *
+   * Por isso o tetrádico guarda UM número (φ), não três offsets soltos: os
+   * offsets [φ, 180, 180+φ] são derivados dele. Offsets independentes
+   * permitiriam quebrar a oposição dos pares, que é justamente o que dá ao
+   * esquema a leitura de retângulo.
+   *
+   * Faixa de φ: simétrica em torno do quadrado, recortando as duas pontas.
+   *
+   * φ é a orientação de uma RETA, então vive módulo 180 — φ e φ+180 descrevem
+   * o mesmo eixo.
+   *
+   * O que o limite protege é a LEITURA do esquema. Perto de 0 o eixo móvel cola
+   * no matiz principal e perto de 180 cola no complementar; nos dois casos o
+   * retângulo achata até virar quase uma linha e a composição deixa de se ler
+   * como tetrádica. 30° de folga em cada ponta mantém os dois eixos claramente
+   * distintos, com margem confortável sobre MIN_HARMONY_GAP, que só garante
+   * que os marcadores não se cubram.
+   *
+   * O teto NÃO é 90, e isso é deliberado. O quadrado (φ=90) é o padrão, não o
+   * máximo: φ=80 e φ=100 são retângulos distintos, inclinados para lados
+   * opostos, com cores diferentes. Parar em 90 tiraria metade das composições
+   * e, pior, travaria o marcador no meio do arraste — o cursor seguiria e o
+   * marcador ficaria para trás. Com a faixa simétrica o marcador acompanha o
+   * cursor pela volta inteira e só encosta nos extremos degenerados.
+   */
+  /**
+   * Faixa de abertura do tetrádico: do eixo perpendicular até perto do eixo
+   * fixo, sem nunca atravessá-lo.
+   *
+   * O eixo móvel começa perpendicular ao fixo (φ=90, o quadrado) e pode fechar
+   * até quase encostar nele. O que ele NÃO pode é passar do outro lado: a
+   * amplitude total do giro é de 90°, não de 180°.
+   *
+   * Isso corrige uma decisão minha que estava errada. Eu havia aberto a faixa
+   * até 150° com o argumento de que φ=80 e φ=100 são retângulos distintos,
+   * inclinados para lados opostos. É verdade geometricamente, mas não é como o
+   * Coolorus se comporta, e a referência é o que vale aqui: passar de 90° deixa
+   * o eixo móvel invadir o semicírculo do outro lado do eixo fixo, e ali ele
+   * não deve entrar.
+   *
+   * O mínimo vem de MIN_HARMONY_GAP, a folga geométrica abaixo da qual dois
+   * marcadores se cobrem na pista — é o "até perto do vermelho, sem encostar".
+   */
+  const TETRA_PHI_DEFAULT = 90;
+  const TETRA_PHI_MIN = MIN_HARMONY_GAP;
+  const TETRA_PHI_MAX = 90;
+
+  /**
+   * Geometria por esquema no modelo do Coolorus: um único ângulo de abertura
+   * (φ) governa a forma, e os braços ESTRUTURAIS ficam travados.
+   *
+   * É a correção de um defeito de fundo. Antes cada braço era um número solto
+   * que podia ser arrastado à parte, e isso permitia desmanchar o próprio
+   * esquema: no análogo acentuado, arrastar o braço complementar o tirava dos
+   * 180° e o "acento" deixava de ser um acento — os quatro marcadores viravam
+   * quatro matizes sem relação. O mesmo vale para a simetria do análogo.
+   *
+   * No modelo φ isso não é possível de expressar:
+   *
+   *   analog  [ φ, −φ ]            simétrico por construção
+   *   accent  [ φ, −φ, 180 ]       o complementar é estrutural
+   *   tetra   [ φ, 180, 180+φ ]    dois eixos, cada um um par oposto
+   *
+   * `arms` diz o que cada braço faz quando arrastado: 'phi' ajusta a abertura,
+   * 'fixed' não tem abertura para ajustar e gira o conjunto inteiro.
+   *
+   * Os esquemas sem entrada aqui (mono, complementar, triádico) têm forma
+   * totalmente rígida e usam os offsets canônicos.
+   */
+  const SCHEME_PHI = {
+    analog: {
+      def: 30, min: MIN_HARMONY_GAP, max: MAX_ANALOG_SPREAD,
+      offsets: (phi) => [phi, -phi],
+      arms: ['phi', 'phi'],
+      // Os dois braços são espelhos: a abertura é o módulo do ângulo.
+      phiFrom: (index, deg) => Math.abs(wrapDeg(deg)),
+      // Aqui φ é uma DISTÂNCIA ao matiz principal, não uma orientação: 170°
+      // significa "muito aberto", e deve parar no máximo.
+      wrap: false
+    },
+    accent: {
+      def: 30, min: MIN_HARMONY_GAP, max: MAX_ANALOG_SPREAD,
+      offsets: (phi) => [phi, -phi, 180],
+      arms: ['phi', 'phi', 'fixed'],
+      phiFrom: (index, deg) => Math.abs(wrapDeg(deg)),
+      wrap: false
+    },
+    tetra: {
+      def: TETRA_PHI_DEFAULT, min: TETRA_PHI_MIN, max: TETRA_PHI_MAX,
+      offsets: (phi) => [phi, 180, 180 + phi],
+      arms: ['phi', 'fixed', 'phi'],
+      /**
+       * φ é a orientação de uma RETA, então vive módulo 180. O braço de índice
+       * 2 está gravado como 180+φ: desconta o meio-giro para achar φ.
+       */
+      phiFrom: (index, deg) => {
+        const bruto = index === 2 ? deg - 180 : deg;
+        return ((bruto % 180) + 180) % 180;
+      },
+      // Sendo orientação, o limite é circular: ver clampPhi.
+      wrap: true
+    }
+  };
+
+  /**
+   * Distância angular entre duas orientações de reta (módulo 180).
+   */
+  function dist180(a, b) {
+    const d = Math.abs(((a - b) % 180) + 180) % 180;
+    return Math.min(d, 180 - d);
+  }
+
+  /**
+   * Encaixa φ na faixa do esquema.
+   *
+   * Para uma abertura simples (`wrap: false`) é um clamp comum.
+   *
+   * Para uma ORIENTAÇÃO (`wrap: true`, o tetrádico) a faixa é um arco num
+   * círculo de 180°, e o que está fora precisa parar na borda MAIS PRÓXIMA.
+   * Essa distinção é o que faz o gesto parecer certo: arrastando o eixo móvel
+   * para além do eixo fixo, ele encosta no mínimo do lado onde o cursor está,
+   * em vez de saltar para o outro extremo da faixa.
+   */
+  function clampPhi(raw, def) {
+    if (raw >= def.min && raw <= def.max) return raw;
+
+    if (!def.wrap) return raw < def.min ? def.min : def.max;
+
+    return dist180(raw, def.min) <= dist180(raw, def.max) ? def.min : def.max;
+  }
+
   const listeners = [];
 
   const HUE_STEP_OPTIONS = [6, 8, 12, 16, 24, 36];
@@ -63,11 +226,46 @@ window.AppState = (function () {
     // Offsets ajustados pelo usuário, por esquema. Um esquema sem entrada
     // aqui usa os ângulos canônicos definidos em HARMONY_SCHEMES.
     harmonyOffsets: {},
+    /**
+     * Âncora da constelação de harmonia: o matiz de onde os offsets partem.
+     *
+     * Antes o marcador principal ERA a cor, e os secundários eram calculados a
+     * partir dela. Isso tornava impossível pintar com um secundário: adotar a
+     * cor dele o promovia a principal, e todos os outros se reposicionavam em
+     * relação ao novo principal — a cada clique o esquema girava, e girava de
+     * novo no clique seguinte.
+     *
+     * Com a âncora separada da cor, os marcadores derivam daqui e clicar num
+     * deles não mexe na figura. Quem gira a constelação é só o gesto de girar,
+     * e ela gira inteira, mantendo os ângulos relativos.
+     */
+    refHue: 4,
+    /**
+     * Qual marcador está ativo: null é o principal, um número é o índice do
+     * secundário. O ativo é o que a cor atual representa.
+     */
+    activeSecondary: null,
+    /**
+     * Ângulo de abertura por esquema, em graus. Fonte única da forma dos
+     * esquemas ajustáveis — ver SCHEME_PHI.
+     */
+    schemePhi: {
+      analog: SCHEME_PHI.analog.def,
+      accent: SCHEME_PHI.accent.def,
+      tetra: SCHEME_PHI.tetra.def
+    },
     sliderMode: 'HSV',
     tempOffset: 0,
     // Rotação do anel de matiz, em graus. Só afeta a apresentação:
     // o matiz da cor continua sendo o valor real de H.
     wheelRotation: 0,
+    /**
+     * Espaço do círculo cromático: 'rgb' (roda da luz) ou 'ryb' (roda do
+     * pintor). Muda onde cada matiz fica na roda e, por consequência, para
+     * onde as harmonias apontam — o complementar do vermelho é o ciano no RGB
+     * e o verde no RYB. A cor em si continua guardada em HSV.
+     */
+    wheelSpace: 'rgb',
     // Forma do seletor interno de saturação/valor
     shape: 'triangle',              // 'triangle' | 'square'
     // Travamento de luminosidade: ao mudar matiz ou saturação, o valor é
@@ -116,10 +314,19 @@ window.AppState = (function () {
 
   /* ---------------- Limitação de cor ---------------- */
 
-  // Encaixa o matiz no centro do setor mais próximo
+  /**
+   * Encaixa o matiz no centro do setor mais próximo.
+   *
+   * Os setores são iguais no ESPAÇO DA RODA, não no matiz: "12 matizes" quer
+   * dizer doze posições igualmente espaçadas no círculo que o usuário vê. Na
+   * roda RGB as duas coisas coincidem; na roda do pintor, não — dividir o
+   * matiz em doze daria setores de tamanhos diferentes na tela, e os matizes
+   * escolhidos não seriam os doze do círculo cromático RYB.
+   */
   function quantizeHue(h, steps) {
     const size = 360 / steps;
-    return (((Math.round(h / size) * size) % 360) + 360) % 360;
+    const angle = hueToAngle(h);
+    return angleToHue(Math.round(angle / size) * size);
   }
 
   // Encaixa um componente 0-100 em `steps` níveis igualmente espaçados
@@ -150,12 +357,16 @@ window.AppState = (function () {
     emit('color');
   }
 
-  // Paleta completa disponível sob o limite atual (útil para preview e export)
+  /**
+   * Paleta completa disponível sob o limite atual (útil para preview e export).
+   * As posições são igualmente espaçadas no espaço da roda, então na roda do
+   * pintor a lista traz os matizes do círculo cromático RYB.
+   */
   function getLimitedPalette() {
     if (!state.limit.enabled) return null;
     const hues = [];
     for (let i = 0; i < state.limit.hueSteps; i++) {
-      hues.push((i * 360) / state.limit.hueSteps);
+      hues.push(angleToHue((i * 360) / state.limit.hueSteps));
     }
     return hues;
   }
@@ -321,6 +532,26 @@ window.AppState = (function () {
     const changed = h !== state.hsv.h || s !== state.hsv.s || v !== state.hsv.v;
     state.hsv = { h, s, v };
 
+    /**
+     * A âncora só acompanha a cor quando o marcador ATIVO é o principal —
+     * situação em que ela é, por definição, o matiz atual (offset zero).
+     *
+     * Com um secundário ativo a âncora fica onde está, e é isso que impede a
+     * constelação de saltar. A versão anterior derivava a âncora da cor em
+     * TODA escrita, e isso transformava qualquer atualização de cor numa
+     * rotação disfarçada. Três caminhos reais faziam isso sem ninguém pedir:
+     *
+     *   - `panel-sync.js` transmite só {h,s,v} entre os dois painéis do CEP;
+     *     quem recebia recalculava a âncora e girava o esquema;
+     *   - `ps-bridge.js` lê a cor de volta do Photoshop, e o arredondamento da
+     *     ida e volta RGB fazia a âncora derivar a cada leitura;
+     *   - o histórico restaura {h,s,v} sem a âncora.
+     *
+     * Nenhum deles aparece nos testes em Node, e era daí que vinha o salto que
+     * sobrevivia a todas as correções anteriores.
+     */
+    if (state.activeSecondary === null) state.refHue = state.hsv.h;
+
     // Quem é dono declara e vale; quem não declara mantém o triplo enquanto
     // ele continuar descrevendo a cor resultante
     state.channels = resolveChannels(opts, state.hsv);
@@ -405,7 +636,30 @@ window.AppState = (function () {
 
   function setScheme(id) {
     if (!HARMONY_SCHEMES.some((s) => s.id === id)) return;
+    const anterior = state.scheme;
     state.scheme = id;
+
+    /**
+     * Trocar de esquema muda quantos secundários existem. Um índice ativo que
+     * não existe mais deixaria a âncora sendo tratada como principal sem aviso,
+     * e o esquema saltaria na primeira mudança de cor. Voltar ao principal é o único
+     * estado que todo esquema tem.
+     */
+    const offs = getHarmonyOffsets();
+    if (state.activeSecondary !== null && state.activeSecondary >= offs.length) {
+      state.activeSecondary = null;
+    }
+
+    /**
+     * Ao trocar de esquema a âncora passa a ser a cor atual, para o esquema
+     * novo nascer em volta do que o artista está usando. Só quando o esquema
+     * realmente muda: repetir o mesmo id não deve mexer em nada.
+     */
+    if (anterior !== id) {
+      state.activeSecondary = null;
+      state.refHue = state.hsv.h;
+    }
+
     emit('scheme');
   }
 
@@ -429,6 +683,11 @@ window.AppState = (function () {
     let d = ((deg % 360) + 360) % 360;
     if (d > 180) d -= 360;
     return d;
+  }
+
+  /** Coloca um ângulo em [0, 360). */
+  function wrap360(deg) {
+    return ((deg % 360) + 360) % 360;
   }
 
   /**
@@ -491,9 +750,49 @@ window.AppState = (function () {
     return resultado;
   }
 
-  // Offsets em uso: os ajustados pelo usuário, ou os canônicos do esquema
+  /* ---------------- Abertura dos esquemas ajustáveis (φ) ---------------- */
+
+  /** Definição de φ do esquema ativo, ou null se a forma é rígida. */
+  function phiDef(id) {
+    return SCHEME_PHI[id || getScheme().id] || null;
+  }
+
+  /** O esquema ativo tem abertura ajustável? */
+  function hasPhi() {
+    return phiDef() !== null;
+  }
+
+  /** Ângulo de abertura do esquema ativo. Zero quando a forma é rígida. */
+  function getPhi(id) {
+    const alvo = id || getScheme().id;
+    return SCHEME_PHI[alvo] ? state.schemePhi[alvo] : 0;
+  }
+
+  /** Define a abertura de um esquema, dentro da faixa dele. */
+  function setPhi(id, deg) {
+    const def = SCHEME_PHI[id];
+    if (!def || !isNum(deg)) return;
+
+    state.schemePhi[id] = clampPhi(deg, def);
+    emit('scheme');
+  }
+
+  /**
+   * O que acontece ao arrastar o braço `index`: 'phi' ajusta a abertura,
+   * 'fixed' gira o conjunto, 'free' é o ajuste solto dos esquemas sem φ.
+   */
+  function armRole(index) {
+    const def = phiDef();
+    if (!def) return 'free';
+    return def.arms[index] === 'phi' ? 'phi' : 'fixed';
+  }
+
+  // Offsets em uso: derivados de φ, ajustados à mão, ou os canônicos
   function getHarmonyOffsets() {
     const scheme = getScheme();
+    const def = SCHEME_PHI[scheme.id];
+    // Esquemas ajustáveis não têm offsets soltos: a forma inteira vem de φ.
+    if (def) return def.offsets(state.schemePhi[scheme.id]);
     const custom = state.harmonyOffsets[scheme.id];
     return custom ? custom.slice() : scheme.offsets.slice();
   }
@@ -502,6 +801,24 @@ window.AppState = (function () {
     const scheme = getScheme();
     if (index < 0 || index >= scheme.offsets.length) return;
 
+    const def = SCHEME_PHI[scheme.id];
+
+    /**
+     * Nos esquemas ajustáveis não existe ajuste individual, e isso é a própria
+     * definição deles. Mover um braço sozinho desmancharia a relação que dá
+     * nome ao esquema: a simetria do análogo, o complementar do acentuado, a
+     * oposição dos eixos do tetrádico.
+     *
+     * Um pedido sobre um braço de abertura vira ajuste de φ. Sobre um braço
+     * estrutural é ignorado — quem quiser mover aquele marcador está querendo
+     * girar o conjunto, e quem trata isso é o wheel.js.
+     */
+    if (def) {
+      if (def.arms[index] !== 'phi') return;
+      setPhi(scheme.id, def.phiFrom(index, deg));
+      return;
+    }
+
     const offsets = getHarmonyOffsets();
     offsets[index] = normalizeOffset(deg);
     state.harmonyOffsets[scheme.id] = keepApart(offsets, index);
@@ -509,54 +826,22 @@ window.AppState = (function () {
   }
 
   /**
-   * Abre ou fecha o esquema inteiro a partir de um braço.
+   * Abre ou fecha o esquema a partir de um braço.
    *
-   * Mover um marcador sozinho é útil para ajuste fino, mas desfaz a
-   * composição: um análogo deixa de ser simétrico na primeira arrastada. Aqui
-   * todos os braços escalam pelo mesmo fator, então a relação entre eles é
-   * preservada — o análogo continua simétrico, o tetrádico continua espaçado
-   * por igual, e o par complementar continua oposto.
+   * Nos esquemas ajustáveis isso é exatamente ajustar φ, e a forma se mantém
+   * por construção: o análogo continua simétrico, o acentuado mantém o
+   * complementar em 180 e o tetrádico mantém os dois eixos opostos.
    *
-   * Cada braço é tratado conforme o papel que exerce na composição:
-   *
-   *   - o espelho do braço arrastado vai para o espelho do novo ângulo. É o
-   *     que mantém a simetria do análogo e do triádico.
-   *   - o eixo complementar (~180) fica parado. Ele é o eixo da composição,
-   *     não uma abertura: girá-lo desfaz a leitura de um análogo acentuado.
-   *   - os demais escalam pelo fator k = novo / atual.
-   *
-   * O espelho é resolvido antes da proporção de propósito. No tetrádico o
-   * terceiro braço está gravado como 270, e escalá-lo por 0,5 daria 135 —
-   * desmanchando o quadrado. Reconhecido como espelho de 90, ele vai para
-   * -45 e a figura continua simétrica em torno do eixo.
+   * A versão anterior escalava cada braço por um fator e tentava reconhecer
+   * papéis ("este é o espelho", "este é o complementar") a cada arraste. Era
+   * frágil e vazava: no acentuado, arrastar o braço complementar caía no ajuste
+   * individual e o tirava dos 180°, desmanchando o acento. Com a forma derivada
+   * de um único ângulo, esse estado não é representável.
    */
   function spreadHarmony(index, deg) {
     const scheme = getScheme();
     if (index < 0 || index >= scheme.offsets.length) return;
-
-    const offsets = getHarmonyOffsets();
-    const atual = offsets[index];
-    const alvo = normalizeOffset(deg);
-
-    // Sem referência de abertura não há fator: cai no ajuste individual.
-    if (Math.abs(atual) < 1e-6 || isOpposite(atual)) {
-      setHarmonyOffset(index, deg);
-      return;
-    }
-
-    const k = alvo / atual;
-    const espelho = normalizeOffset(-atual);
-
-    const escalados = offsets.map((off, i) => {
-      if (i === index) return alvo;
-      if (isOpposite(off)) return off;
-      if (Math.abs(normalizeOffset(off) - espelho) < 1e-6) return normalizeOffset(-alvo);
-      return normalizeOffset(off * k);
-    });
-
-    state.harmonyOffsets[scheme.id] = keepApart(escalados, index);
-
-    emit('scheme');
+    setHarmonyOffset(index, deg);
   }
 
   // Um braço é o eixo complementar quando aponta para o lado oposto do matiz.
@@ -565,22 +850,107 @@ window.AppState = (function () {
     return Math.abs(d - 180) < 1e-6;
   }
 
-  // Volta o esquema ativo aos ângulos canônicos
+  // Volta o esquema ativo à forma canônica
   function resetHarmony() {
-    delete state.harmonyOffsets[getScheme().id];
+    const scheme = getScheme();
+    const def = SCHEME_PHI[scheme.id];
+    // Esquemas ajustáveis são definidos por φ: restaurar é voltar à abertura padrão.
+    if (def) state.schemePhi[scheme.id] = def.def;
+    delete state.harmonyOffsets[scheme.id];
     emit('scheme');
   }
 
   function isHarmonyEdited() {
     const scheme = getScheme();
+    const def = SCHEME_PHI[scheme.id];
+    if (def) return Math.abs(state.schemePhi[scheme.id] - def.def) > 1e-9;
+
     const custom = state.harmonyOffsets[scheme.id];
     if (!custom) return false;
     return custom.some((off, i) => Math.abs(off - scheme.offsets[i]) > 1e-9);
   }
 
-  // Matizes secundários do esquema ativo (Requisito 3.2)
+  /**
+   * Adota a cor de um marcador secundário, sem mover a constelação
+   * (Requisito 3.4).
+   *
+   * Este é o gesto que estava defeituoso: um clique num secundário girava o
+   * esquema inteiro, e o clique seguinte girava de novo, num ciclo que
+   * destruía a composição. A causa era o marcador principal SER a cor — adotar
+   * um secundário o promovia a principal e os demais se recolocavam em torno
+   * dele.
+   *
+   * Agora a ordem é: primeiro marca quem está ativo, depois grava a cor. Com um
+   * secundário ativo, `setHsv` não toca na âncora — logo a figura fica parada
+   * por construção, em qualquer esquema e com qualquer φ. Deixou de ser um caso
+   * especial resolvido por simetria, que era o que falhava no análogo.
+   */
+  function adoptHarmonyMarker(index) {
+    const offsets = getHarmonyOffsets();
+    if (index < 0 || index >= offsets.length) return;
+
+    const hues = getHarmonyHues();
+    const hsv = getHsv();
+
+    // A ordem importa: marcar o ativo ANTES de setHsv é o que impede a âncora
+    // de acompanhar a cor nova.
+    setActiveMarker(index);
+    setHsv({ h: hues[index], s: hsv.s, v: hsv.v }, { commit: true });
+  }
+
+  /**
+   * Matizes secundários do esquema ativo (Requisito 3.2).
+   *
+   * Os offsets são ÂNGULOS NA RODA, não diferenças de matiz. É essa distinção
+   * que faz a teoria das cores mudar junto com o espaço escolhido: um
+   * complementar é "meia volta na roda", e meia volta a partir do vermelho cai
+   * no ciano na roda RGB e no verde na roda do pintor.
+   */
   function getHarmonyHues() {
-    return getHarmonyOffsets().map((off) => (((state.hsv.h + off) % 360) + 360) % 360);
+    const base = hueToAngle(state.refHue);
+    return getHarmonyOffsets().map((off) => angleToHue(base + off));
+  }
+
+  /** Matiz do marcador principal — onde a âncora aparece na roda. */
+  function getRefHue() {
+    return state.refHue;
+  }
+
+  /**
+   * Move a âncora para um matiz. É o ÚNICO caminho que gira a constelação, e
+   * existe separado de `setHsv` de propósito: escrever cor e girar o esquema
+   * são intenções diferentes, e confundi-las foi a origem do salto.
+   */
+  function setRefHue(hue) {
+    if (!isNum(hue)) return;
+    state.refHue = wrap360(hue);
+  }
+
+  /**
+   * Gira a constelação até que o marcador de índice `index` caia no ângulo
+   * pedido. `null` como índice trata o principal.
+   *
+   * Corpo rígido: os ângulos relativos entre marcadores não mudam, só a
+   * orientação do conjunto. Sem descontar o offset do marcador agarrado, o
+   * principal iria direto para o cursor e a figura saltaria — era o defeito de
+   * arrastar um secundário nos esquemas de forma fixa.
+   */
+  function rotateSetTo(angle, index) {
+    if (!isNum(angle)) return;
+    const offs = getHarmonyOffsets();
+    const off = (index === null || index === undefined) ? 0 : (offs[index] || 0);
+    setRefHue(angleToHue(angle - off));
+  }
+
+  /**
+   * Escolhe qual marcador está ativo, sem tocar na geometria.
+   * `null` volta ao principal.
+   */
+  function setActiveMarker(index) {
+    if (index === null) { state.activeSecondary = null; return; }
+    const offs = getHarmonyOffsets();
+    if (!(index >= 0 && index < offs.length)) return;
+    state.activeSecondary = index;
   }
 
   /* ---------------- Outros ---------------- */
@@ -588,6 +958,38 @@ window.AppState = (function () {
   function setSliderMode(mode) {
     state.sliderMode = mode;
     emit('mode');
+  }
+
+  /* ---------------- Espaço do círculo cromático (RGB / RYB) ---------------- */
+
+  const WHEEL_SPACES = ['rgb', 'ryb'];
+
+  function setWheelSpace(id) {
+    if (!WHEEL_SPACES.includes(id)) return;
+    state.wheelSpace = id;
+    emit('wheelSpace');
+  }
+
+  /**
+   * Conversores entre MATIZ (o valor real de H, que define a cor) e ÂNGULO NA
+   * RODA (onde esse matiz aparece na tela).
+   *
+   * No espaço RGB os dois coincidem e as funções são identidade. No RYB a roda
+   * é reordenada para a do pintor, e é esta única dupla de funções que carrega
+   * a diferença — todo o resto do programa (desenho do anel, posição dos
+   * marcadores, escolha por clique, harmonias, quantização, disco do gamut)
+   * fala em termos delas em vez de assumir que ângulo é matiz.
+   *
+   * Concentrar a conversão aqui é o que evita o modo RYB "meio aplicado": se
+   * cada consumidor fizesse a própria conta, bastaria um esquecer para os
+   * marcadores caírem fora do anel que eles deveriam indicar.
+   */
+  function hueToAngle(hue) {
+    return state.wheelSpace === 'ryb' ? C.hueToRyb(hue) : wrap360(hue);
+  }
+
+  function angleToHue(angle) {
+    return state.wheelSpace === 'ryb' ? C.rybToHue(angle) : wrap360(angle);
   }
 
   /* ---------------- Rotação da roda e forma do seletor ---------------- */
@@ -833,18 +1235,22 @@ window.AppState = (function () {
    * Matiz e saturação → coordenadas normalizadas do disco.
    * Matiz 0 fica no topo, como no anel: sem esse alinhamento a máscara
    * seria desenhada 90° fora de onde realmente restringe as cores.
+   *
+   * O ângulo é o da RODA, não o matiz cru: o disco encosta no anel e precisa
+   * concordar com ele. Na roda do pintor, um matiz mora numa posição angular
+   * diferente, e sem a conversão a máscara restringiria cores que não são as
+   * que ela cobre na tela.
    */
   function hsToDisc(h, s) {
     const r = C.clamp(s, 0, 100) / 100;
-    const a = (h - 90) * DEG;
+    const a = (hueToAngle(h) - 90) * DEG;
     return { u: r * Math.cos(a), v: r * Math.sin(a) };
   }
 
   function discToHs(u, v) {
     const r = Math.hypot(u, v);
-    let h = Math.atan2(v, u) / DEG + 90;
-    h = ((h % 360) + 360) % 360;
-    return { h, s: C.clamp(r * 100, 0, 100) };
+    const a = wrap360(Math.atan2(v, u) / DEG + 90);
+    return { h: angleToHue(a), s: C.clamp(r * 100, 0, 100) };
   }
 
   // Ponto do disco no espaço unitário da máscara
@@ -1088,12 +1494,17 @@ window.AppState = (function () {
     pushHistory, canUndo, canRedo, undo, redo,
     getScheme, setScheme, getHarmonyHues,
     getHarmonyOffsets, setHarmonyOffset, spreadHarmony, resetHarmony, isHarmonyEdited, normalizeOffset,
-    MIN_HARMONY_GAP,
+    MIN_HARMONY_GAP, MAX_ANALOG_SPREAD, MAX_TETRA_SPREAD,
+    adoptHarmonyMarker,
+    getRefHue, setRefHue, rotateSetTo, setActiveMarker,
+    SCHEME_PHI, hasPhi, getPhi, setPhi, armRole,
+    TETRA_PHI_DEFAULT, TETRA_PHI_MIN, TETRA_PHI_MAX,
     setSliderMode, setTempOffset, swapForeground,
     quantizeHue, quantizeLevel, applyLimit, setLimit, getLimitedPalette,
     setBwSteps, getBwRamp,
     setValueCheck, display, displayCss,
     SHAPES, setWheelRotation, nudgeWheelRotation, resetWheelRotation, setShape,
+    WHEEL_SPACES, setWheelSpace, hueToAngle, angleToHue,
     setLuminosityLock, luminosityOf, applyLuminosityLock,
     MASK_KINDS, MASK_SHAPES, MASK_DEFAULT_SIZE, maskShape, maskOutline,
     maskAnchorsUnit, hasReachableAnchor,

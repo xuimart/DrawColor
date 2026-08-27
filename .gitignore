@@ -13,3 +13,20 @@ node_modules/
 # --- local ---
 _backups/
 .kiro/settings/
+
+# --- segredos e ambiente do firebase ---
+# .env guarda chaves; venv e __pycache__ são ambiente local, não fonte.
+firebase/functions/.env
+firebase/functions/venv/
+firebase/functions/__pycache__/
+**/__pycache__/
+
+# --- artefatos de build do instalador ---
+# O .exe e o .zip vão para a Release do GitHub, não para o histórico do repo.
+build_1.0.0/DrawColor_Setup.exe
+build_1.0.0/drawcolor_plugin.zip
+build_1.0.0/_build.txt
+build_1.0.0/_csc_out.txt
+build_1.0.0/_csc_err.txt
+DrawColor-v1.0.0-beta.zip
+_release/

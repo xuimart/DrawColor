@@ -229,17 +229,80 @@ describe('Harmonia: abrir e fechar o esquema mantendo a composição', () => {
       `braços a ${entreBracos}° um do outro: eles se cobrem`);
   });
 
-  it('a proporção entre braços desiguais é preservada', () => {
-    comEsquema('tetra');                            // [90, 180, 270]
-    S.spreadHarmony(0, 45);                         // fator 0,5
+  it('o tetrádico abre e fecha mantendo os dois eixos opostos', () => {
+    comEsquema('tetra');                            // [90, 180, 270] — φ = 90
+    assert.deepStrictEqual(S.getHarmonyOffsets(), [90, 180, 270]);
+
+    S.spreadHarmony(0, 45);                         // fecha o eixo móvel para 45°
 
     const depois = S.getHarmonyOffsets();
-    assert.strictEqual(depois[0], 45);
-    // 180 é o eixo complementar: fica parado.
-    assert.strictEqual(depois[1], 180);
-    // 270 é o espelho de 90: vai para o espelho do novo ângulo, não para
-    // 270 × 0,5 = 135, que desmancharia a simetria do quadrado.
-    assert.strictEqual(depois[2], -45);
+    assert.strictEqual(depois[0], 45, 'o eixo móvel não acompanhou o arraste');
+    assert.strictEqual(depois[1], 180, 'o eixo fixo se mexeu');
+    assert.strictEqual(depois[2], 225, 'o par do eixo móvel deixou de ser oposto');
+
+    // A invariante do esquema: cada eixo é um par de complementares.
+    assert.strictEqual(depois[2] - depois[0], 180, 'eixo móvel não está oposto');
+  });
+
+  it('o eixo fixo do tetrádico não abre: arrastá-lo não muda φ', () => {
+    comEsquema('tetra');
+    S.spreadHarmony(1, 120);                        // índice 1 é o complementar do principal
+
+    assert.deepStrictEqual(S.getHarmonyOffsets(), [90, 180, 270],
+      'mexer no eixo fixo alterou a abertura');
+  });
+
+  /**
+   * A amplitude de giro do eixo móvel do tetrádico é de 90°, não de 180°.
+   *
+   * O eixo móvel nasce perpendicular ao fixo (φ=90, o quadrado) e fecha até a
+   * folga mínima. O que ele não pode é ATRAVESSAR o eixo fixo e aparecer do
+   * outro lado — foi o defeito relatado, e vinha de uma decisão minha de abrir
+   * a faixa até 150° por um argumento geométrico que não corresponde ao
+   * comportamento da referência.
+   */
+  it('o eixo móvel do tetrádico gira no máximo 90°, sem atravessar o fixo', () => {
+    assert.strictEqual(S.TETRA_PHI_MAX, 90, 'o teto do tetrádico saiu de 90°');
+
+    comEsquema('tetra');
+
+    // Fechar em direção ao eixo fixo funciona até a folga mínima.
+    [75, 45, 20, S.TETRA_PHI_MIN].forEach((alvo) => {
+      S.setHarmonyOffset(0, alvo);
+      assert.strictEqual(S.getPhi('tetra'), alvo, `fechar em ${alvo}° não pegou`);
+    });
+
+    // Nenhum arraste consegue pôr φ fora da faixa — nem passando de 90, nem
+    // atravessando o eixo fixo pelo outro lado.
+    for (let cursor = -360; cursor <= 720; cursor += 3) {
+      S.setHarmonyOffset(0, cursor);
+      const phi = S.getPhi('tetra');
+      assert.ok(phi >= S.TETRA_PHI_MIN - 1e-9 && phi <= S.TETRA_PHI_MAX + 1e-9,
+        `cursor em ${cursor}° levou φ para ${phi}°, fora de [${S.TETRA_PHI_MIN}, ${S.TETRA_PHI_MAX}]`);
+
+      // E os dois eixos seguem sendo pares opostos, sempre.
+      const off = S.getHarmonyOffsets();
+      assert.strictEqual(off[1], 180, 'o eixo fixo se mexeu');
+      assert.strictEqual(off[2] - off[0], 180, 'o eixo móvel deixou de ser oposto');
+    }
+  });
+
+  it('passar do perpendicular trava em 90, sem pular para o outro extremo', () => {
+    comEsquema('tetra');
+
+    // Logo depois de 90 a borda mais próxima é o próprio 90.
+    [95, 110, 130].forEach((cursor) => {
+      S.setHarmonyOffset(0, cursor);
+      assert.strictEqual(S.getPhi('tetra'), 90,
+        `cursor em ${cursor}° deveria encostar em 90°`);
+    });
+
+    // Já perto do eixo fixo pelo outro lado, a borda próxima é o mínimo.
+    [165, 175].forEach((cursor) => {
+      S.setHarmonyOffset(0, cursor);
+      assert.strictEqual(S.getPhi('tetra'), S.TETRA_PHI_MIN,
+        `cursor em ${cursor}° deveria encostar no mínimo`);
+    });
   });
 
   it('o eixo complementar não abre junto', () => {
@@ -252,23 +315,101 @@ describe('Harmonia: abrir e fechar o esquema mantendo a composição', () => {
     assert.strictEqual(depois[2], 180, 'o complementar girou e desfez o acento');
   });
 
-  it('arrastar o próprio complementar cai no ajuste individual', () => {
+  /**
+   * O defeito relatado no análogo acentuado.
+   *
+   * O braço de 180° É o acento: é ele que dá nome ao esquema. Antes ele podia
+   * ser arrastado como um braço qualquer, e arrastá-lo para 120° punha o quarto
+   * marcador no magenta em vez do complementar — quatro matizes sem relação
+   * entre si, e o esquema deixava de ser um análogo acentuado.
+   *
+   * Agora esse estado não é representável: a forma vem de φ, e o 180 é
+   * estrutural. Arrastar aquele marcador na roda gira o conjunto (ver wheel.js),
+   * o que é o gesto útil ali.
+   */
+  it('o complementar do acentuado é estrutural e não se move', () => {
     comEsquema('accent');
-    S.spreadHarmony(2, 170);
 
-    const depois = S.getHarmonyOffsets();
-    assert.strictEqual(depois[2], 170);
-    assert.strictEqual(depois[0], 30, 'os análogos se mexeram sem motivo');
-    assert.strictEqual(depois[1], -30);
+    [120, 90, 250, 0, -60].forEach((alvo) => {
+      S.spreadHarmony(2, alvo);
+      const depois = S.getHarmonyOffsets();
+      assert.strictEqual(depois[2], 180,
+        `arrastar o acento para ${alvo}° tirou o complementar dos 180°`);
+      assert.strictEqual(depois[0], 30, 'os análogos se mexeram sem motivo');
+      assert.strictEqual(depois[1], -30);
+    });
   });
 
-  it('o ajuste individual continua disponível', () => {
+  /**
+   * Não existe ajuste individual nos esquemas ajustáveis, e isso é a definição
+   * deles: mover um braço sozinho desmancharia a relação que dá nome ao
+   * esquema. Qualquer pedido sobre um braço de abertura vira ajuste de φ, e a
+   * simetria se mantém.
+   */
+  it('mexer um braço do análogo ajusta a abertura, mantendo a simetria', () => {
     comEsquema('analog');
-    S.setHarmonyOffset(0, 80);
+    S.setHarmonyOffset(0, 45);
 
     const depois = S.getHarmonyOffsets();
-    assert.strictEqual(depois[0], 80);
-    assert.strictEqual(depois[1], -30, 'o ajuste individual mexeu no outro braço');
+    assert.strictEqual(depois[0], 45);
+    assert.strictEqual(depois[1], -45, 'o análogo deixou de ser simétrico');
+  });
+
+  it('o espelho também ajusta a abertura, pelo módulo do ângulo', () => {
+    comEsquema('analog');
+    S.setHarmonyOffset(1, -50);
+
+    assert.deepStrictEqual(S.getHarmonyOffsets(), [50, -50]);
+  });
+
+  /**
+   * O teto da abertura é a LINHA RETA: braços a ±90° do principal, 180° entre
+   * eles. Passando disso a figura se dobraria para trás, com os braços
+   * voltando a se aproximar pelo outro lado.
+   */
+  it('os braços do análogo abrem até formar uma linha reta', () => {
+    assert.strictEqual(S.MAX_ANALOG_SPREAD, 90,
+      'o teto deixou de ser a linha reta');
+
+    comEsquema('analog');
+    S.setHarmonyOffset(0, 90);
+
+    const off = S.getHarmonyOffsets();
+    assert.deepStrictEqual(off, [90, -90]);
+    assert.strictEqual(Math.abs(off[0] - off[1]), 180,
+      'os braços não chegaram aos 180° de abertura');
+  });
+
+  it('no acentuado, a abertura máxima distribui os quatro marcadores por igual', () => {
+    comEsquema('accent');
+    S.setHarmonyOffset(0, 90);
+
+    assert.deepStrictEqual(S.getHarmonyOffsets(), [90, -90, 180]);
+
+    // Principal em 0 mais os três braços: 0, 90, 180, 270.
+    S.setActiveMarker(null);
+    S.setHsv({ h: 0, s: 100, v: 100 });
+    const todos = [S.getRefHue()].concat(S.getHarmonyHues())
+      .map((h) => Math.round(((h % 360) + 360) % 360))
+      .sort((a, b) => a - b);
+    assert.deepStrictEqual(todos, [0, 90, 180, 270]);
+  });
+
+  /**
+   * Só ângulos que de fato passam do máximo. Um cursor em 300°, por exemplo,
+   * equivale a −60°: é o braço posicionado 60° no lado espelho, uma abertura
+   * legítima, e não uma tentativa de passar do limite.
+   */
+  it('arrastar além do máximo encosta na linha reta, sem dobrar', () => {
+    comEsquema('accent');
+
+    [120, 160, 200].forEach((cursor) => {
+      S.setHarmonyOffset(0, cursor);
+      const off = S.getHarmonyOffsets();
+      assert.strictEqual(off[0], 90, `cursor em ${cursor}° passou do máximo`);
+      assert.strictEqual(off[1], -90, 'a simetria se perdeu no limite');
+      assert.strictEqual(off[2], 180, 'o acento saiu dos 180°');
+    });
   });
 
   it('nenhum braço colide com o matiz principal', () => {
@@ -493,17 +634,21 @@ describe('Harmonia: marcadores nunca se cobrem na pista', () => {
     });
   });
 
-  it('o ajuste individual também não deixa um braço colar no outro', () => {
+  it('fechar a abertura ao máximo não deixa um braço colar no outro', () => {
     S.setScheme('accent');
     S.resetHarmony();
 
-    // Tenta empurrar o primeiro braço para cima do segundo.
-    const offsets = S.getHarmonyOffsets();
-    S.setHarmonyOffset(0, offsets[1]);
-    conferir('ajuste individual sobre o vizinho');
+    // Tenta colapsar a abertura até zero; o mínimo de φ tem de segurar.
+    [10, 5, 1, 0, -5].forEach((alvo) => {
+      S.setHarmonyOffset(0, alvo);
+      conferir(`abertura pedida em ${alvo}`);
+    });
 
-    // E o braço movido fica onde foi pedido; quem cede é o vizinho.
-    assert.strictEqual(S.getHarmonyOffsets()[0], S.normalizeOffset(offsets[1]));
+    const depois = S.getHarmonyOffsets();
+    assert.ok(Math.abs(depois[0]) >= S.MIN_HARMONY_GAP,
+      'a abertura passou do mínimo geométrico');
+    assert.strictEqual(depois[0], -depois[1], 'a simetria se perdeu ao fechar');
+    assert.strictEqual(depois[2], 180, 'o acento saiu dos 180° ao fechar');
   });
 
   it('varrer um braço por toda a volta nunca gera coincidência', () => {
@@ -598,5 +743,240 @@ describe('Harmonia: a escrita dos sliders não se derruba', () => {
     });
 
     S.state.sliderMode = 'LAB';
+  });
+});
+
+/**
+ * A âncora da constelação (refHue).
+ *
+ * Este grupo existe por causa de um defeito que voltou duas vezes: clicar num
+ * marcador secundário girava o esquema inteiro, e o clique seguinte girava de
+ * novo — um ciclo que destruía a composição sem o usuário arrastar nada.
+ *
+ * A causa era o marcador principal SER a cor. Adotar um secundário o promovia a
+ * principal, e todos os outros se recolocavam em torno dele. As tentativas
+ * anteriores compensaram caso a caso, por simetria do esquema, e por isso
+ * funcionaram no complementar, no triádico e no tetrádico mas continuaram
+ * quebradas no análogo e no acentuado.
+ *
+ * A correção separa a ÂNCORA (de onde os offsets partem) da COR (o que está
+ * sendo editado). Os testes abaixo cobrem a invariante que sustenta isso, em
+ * todos os esquemas e não só nos simétricos.
+ */
+describe('Harmonia: a âncora separa a constelação da cor', () => {
+  const TODOS = ['comp', 'analog', 'accent', 'triad', 'tetra'];
+
+  /** O conjunto de matizes na roda, normalizado para comparação. */
+  function constelacao() {
+    return [S.getRefHue()].concat(S.getHarmonyHues())
+      .map((h) => Math.round(((h % 360) + 360) % 360))
+      .sort((a, b) => a - b)
+      .join(',');
+  }
+
+  /**
+   * Isola o estado antes de cada cenário.
+   *
+   * A máscara de gamut precisa ficar desligada de propósito: os grupos de teste
+   * anteriores deste arquivo a deixam ativa, e `applyGamutMask` recorta o matiz
+   * sempre que está habilitada. Um matiz recortado faria estes testes falharem
+   * por um motivo que nada tem a ver com a âncora.
+   */
+  function preparar(id, matiz) {
+    S.setGamut({ enabled: false });
+    S.setLimit({ enabled: false });
+    S.setLuminosityLock(false);
+    S.setActiveMarker(null);
+    S.setHsv({ h: matiz, s: 100, v: 100 });
+    S.setScheme(id);
+    S.resetHarmony();
+  }
+
+  it('clicar num secundário não move a constelação, em nenhum esquema', () => {
+    TODOS.forEach((id) => {
+      preparar(id, 30);
+      const antes = constelacao();
+
+      S.getHarmonyHues().forEach((_, i) => {
+        S.adoptHarmonyMarker(i);
+        assert.strictEqual(constelacao(), antes,
+          `${id}: adotar o secundário ${i} moveu a figura (${antes} → ${constelacao()})`);
+      });
+    });
+  });
+
+  /**
+   * O sintoma exato relatado: "eu nem arrasto, só clico e ele se movimenta
+   * sozinho, nesse ciclo infinito". Cliques repetidos precisam ser inertes.
+   */
+  it('cliques repetidos não acumulam rotação', () => {
+    TODOS.forEach((id) => {
+      preparar(id, 30);
+      const antes = constelacao();
+
+      for (let volta = 0; volta < 12; volta++) {
+        S.adoptHarmonyMarker(volta % S.getHarmonyHues().length);
+      }
+
+      assert.strictEqual(constelacao(), antes,
+        `${id}: 12 cliques giraram a figura`);
+    });
+  });
+
+  it('clicar num secundário adota a cor dele', () => {
+    preparar('accent', 30);
+    const hues = S.getHarmonyHues();
+
+    hues.forEach((hue, i) => {
+      S.adoptHarmonyMarker(i);
+      assert.ok(Math.abs(S.getHsv().h - hue) < 1e-9,
+        `a cor não virou o matiz do secundário ${i}`);
+      assert.strictEqual(S.state.activeSecondary, i, 'o marcador ativo não acompanhou');
+    });
+  });
+
+  it('mudar a cor gira o conjunto inteiro, preservando os ângulos relativos', () => {
+    TODOS.forEach((id) => {
+      preparar(id, 30);
+
+      const relativos = (base, hues) => hues
+        .map((h) => Math.round((((h - base) % 360) + 360) % 360))
+        .join(',');
+
+      const antes = relativos(S.getRefHue(), S.getHarmonyHues());
+
+      S.setHsv({ h: 200, s: 100, v: 100 });
+
+      const depois = relativos(S.getRefHue(), S.getHarmonyHues());
+      assert.strictEqual(depois, antes,
+        `${id}: girar deformou o esquema (${antes} → ${depois})`);
+    });
+  });
+
+  /**
+   * A regra que substituiu a tentativa anterior, e a razão da troca.
+   *
+   * Antes a âncora era deduzida da cor ("âncora = matiz menos offset do
+   * ativo"), o que fazia a constelação girar junto para manter o marcador ativo
+   * sob a cor. Parecia elegante, mas transformava TODA escrita de cor numa
+   * rotação — inclusive as que o usuário não pede, vindas da sincronização
+   * entre painéis, da leitura de volta do Photoshop e do histórico.
+   *
+   * Agora a âncora é autoritativa: com um secundário ativo, escrever cor não
+   * move nada. Quem gira o esquema é só o gesto de girar.
+   */
+  it('com um secundário ativo, escrever cor não move a constelação', () => {
+    preparar('analog', 30);
+    S.adoptHarmonyMarker(0);
+    const antes = constelacao();
+
+    S.setHsv({ h: 250, s: 100, v: 100 });
+
+    assert.strictEqual(constelacao(), antes,
+      'a cor arrastou a constelação — a âncora voltou a ser derivada da cor');
+  });
+
+  it('trocar para um esquema com menos braços solta o marcador ativo', () => {
+    preparar('tetra', 30);
+    S.adoptHarmonyMarker(2);
+    assert.strictEqual(S.state.activeSecondary, 2);
+
+    // Complementar tem um secundário só: o índice 2 deixa de existir.
+    S.setScheme('comp');
+    assert.strictEqual(S.state.activeSecondary, null,
+      'um índice inexistente ficou ativo e a âncora sairia do lugar');
+  });
+
+  it('índice inválido não troca o marcador ativo nem move nada', () => {
+    preparar('triad', 30);
+    const antes = constelacao();
+
+    S.setActiveMarker(99);
+    S.adoptHarmonyMarker(99);
+    S.adoptHarmonyMarker(-1);
+
+    assert.strictEqual(S.state.activeSecondary, null);
+    assert.strictEqual(constelacao(), antes);
+  });
+
+  /**
+   * Este é o teste que faltava, e é o motivo de o defeito ter sobrevivido a
+   * três correções: nenhum caminho que ESCREVE COR de fora era exercitado.
+   *
+   * No Photoshop real três deles disparam sozinhos, sem o usuário pedir:
+   *
+   *   - `panel-sync.js` transmite {h,s,v} entre os dois painéis do CEP;
+   *   - `ps-bridge.js` lê a cor de volta do Photoshop, com arredondamento da
+   *     ida e volta RGB, o que muda o matiz em um grau ou dois;
+   *   - o histórico restaura {h,s,v}.
+   *
+   * Enquanto a âncora era derivada da cor, cada um deles virava uma rotação
+   * disfarçada — e é isso que o usuário via como "clico e os outros pulam, num
+   * ciclo infinito". A âncora precisa ignorar essas escritas quando um
+   * secundário está ativo.
+   */
+  it('escrever cor de fora não move a constelação com um secundário ativo', () => {
+    TODOS.forEach((id) => {
+      preparar(id, 30);
+      S.adoptHarmonyMarker(0);
+      const antes = constelacao();
+
+      // panel-sync: o par reenvia a mesma cor com origem própria.
+      const cor = S.getHsv();
+      S.setHsv({ h: cor.h, s: cor.s, v: cor.v }, { reason: 'peer', relock: true });
+      assert.strictEqual(constelacao(), antes, `${id}: panel-sync girou o esquema`);
+
+      // ps-bridge: a cor volta do Photoshop com um desvio de arredondamento.
+      const rgb = S.getRgb();
+      S.setRgb(rgb.r + 1, rgb.g, rgb.b, { reason: 'host' });
+      assert.strictEqual(constelacao(), antes, `${id}: a ponte do Photoshop girou o esquema`);
+    });
+  });
+
+  it('girar move a âncora e preserva os ângulos relativos', () => {
+    const relativos = () => {
+      const base = S.getRefHue();
+      return S.getHarmonyHues()
+        .map((h) => Math.round((((h - base) % 360) + 360) % 360))
+        .join(',');
+    };
+
+    TODOS.forEach((id) => {
+      preparar(id, 30);
+      const forma = relativos();
+
+      // O gesto de girar: âncora explícita, marcador principal ativo.
+      S.setActiveMarker(null);
+      S.setRefHue(200);
+      S.setHsv({ h: 200, s: 100, v: 100 });
+
+      assert.strictEqual(Math.round(S.getRefHue()), 200, `${id}: a âncora não girou`);
+      assert.strictEqual(relativos(), forma, `${id}: girar deformou o esquema`);
+    });
+  });
+
+  it('arrastar um secundário em forma fixa põe ele sob o cursor sem deformar', () => {
+    preparar('triad', 0);
+    const forma = S.getHarmonyOffsets().slice();
+
+    S.setActiveMarker(0);
+    S.rotateSetTo(90, 0);
+
+    assert.ok(Math.abs(S.getHarmonyHues()[0] - 90) < 1e-9,
+      'o marcador agarrado não ficou no ângulo pedido');
+    assert.deepStrictEqual(S.getHarmonyOffsets(), forma,
+      'a forma do triádico mudou ao ser girada');
+  });
+
+  it('trocar de esquema reancora na cor atual e volta ao principal', () => {
+    preparar('analog', 30);
+    S.adoptHarmonyMarker(1);
+
+    S.setHsv({ h: 270, s: 100, v: 100 });
+    S.setScheme('tetra');
+
+    assert.strictEqual(S.state.activeSecondary, null, 'o ativo não voltou ao principal');
+    assert.ok(Math.abs(S.getRefHue() - S.getHsv().h) < 1e-9,
+      'o esquema novo não nasceu em volta da cor atual');
   });
 });

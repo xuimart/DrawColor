@@ -85,10 +85,16 @@ console.log(fails === 0
 /* ================= Geometria do triângulo (Requisito 2) ================= */
 
 global.window.AppState = {
-  state: { wheelRotation: 0, shape: 'triangle', limit: { enabled: false, svSteps: 0 } },
+  state: {
+    wheelRotation: 0, shape: 'triangle', limit: { enabled: false, svSteps: 0 },
+    wheelSpace: 'rgb'
+  },
   getHsv: () => ({ h: 0, s: 100, v: 100 }),
   getHarmonyHues: () => [],
   quantizeLevel: (v) => v,
+  // Este bloco confere a geometria na roda RGB, onde matiz e posição coincidem.
+  hueToAngle: (h) => h,
+  angleToHue: (a) => a,
   subscribe: () => {},
   pushHistory: () => {},
   setHsv: () => {},
@@ -948,15 +954,21 @@ St.setLuminosityLock(false);
 St.setWheelRotation(0);
 
 // Sem edição, os offsets são os canônicos do esquema
-St.setScheme('split');
+St.setScheme('accent');
 const canonical = St.getScheme().offsets.slice();
 if (JSON.stringify(St.getHarmonyOffsets()) !== JSON.stringify(canonical)) {
   hfail('offsets iniciais deveriam ser os canônicos');
 }
 if (St.isHarmonyEdited()) hfail('esquema recém-selecionado não deveria contar como editado');
 
-// Normalização para (-180, 180]
-[[190, -170], [360, 2], [-190, 170], [540, 180], [0, 2], [1, 2], [-1, -2], [45, 45]]
+/**
+ * Normalização para (-180, 180], com os offsets colados no matiz principal
+ * empurrados para a folga mínima. A folga sai de MIN_HARMONY_GAP, derivada do
+ * tamanho dos marcadores — por isso a expectativa se lê da constante em vez de
+ * repetir o número, que já mudou de 2 para 12 quando a geometria foi medida.
+ */
+const GAP = St.MIN_HARMONY_GAP;
+[[190, -170], [360, GAP], [-190, 170], [540, 180], [0, GAP], [1, GAP], [-1, -GAP], [45, 45]]
   .forEach(([input, expected]) => {
     const got = St.normalizeOffset(input);
     if (Math.abs(got - expected) > 1e-9) {
@@ -1001,18 +1013,18 @@ if (St.isHarmonyEdited()) hfail('triádico não deveria estar editado');
 if (JSON.stringify(St.getHarmonyOffsets()) !== JSON.stringify(St.getScheme().offsets)) {
   hfail('triádico deveria usar os offsets canônicos');
 }
-St.setScheme('split');
-if (!St.isHarmonyEdited()) hfail('a edição do split deveria ter sido preservada');
-if (Math.abs(St.getHarmonyOffsets()[0] - 100) > 1e-9) hfail('offset editado do split se perdeu');
+St.setScheme('accent');
+if (!St.isHarmonyEdited()) hfail('a edição do acentuado deveria ter sido preservada');
+if (Math.abs(St.getHarmonyOffsets()[0] - 100) > 1e-9) hfail('offset editado do acentuado se perdeu');
 
 // Restaurar volta aos canônicos e só do esquema ativo
 St.setScheme('triad');
 St.setHarmonyOffset(0, 45);
-St.setScheme('split');
+St.setScheme('accent');
 St.resetHarmony();
-if (St.isHarmonyEdited()) hfail('split deveria estar restaurado');
+if (St.isHarmonyEdited()) hfail('acentuado deveria estar restaurado');
 St.setScheme('triad');
-if (!St.isHarmonyEdited()) hfail('restaurar o split não deveria afetar o triádico');
+if (!St.isHarmonyEdited()) hfail('restaurar o acentuado não deveria afetar o triádico');
 St.resetHarmony();
 
 // Quantidade de braços bate com o esquema, em todos eles
