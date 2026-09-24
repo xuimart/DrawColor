@@ -192,10 +192,16 @@ window.LAYOUT = (function () {
    * escala muda um pouco a reserva. Uma passada só é suficiente porque na
    * situação que importa — painel apertado — o piso em px domina e a reserva
    * fica estável.
+   *
+   * A lista precisa cobrir TODA linha da faixa. O bloco "Limitar cores"
+   * (`.limit-panel`) entrou na faixa depois e ficou de fora daqui: a escala
+   * reservava menos espaço do que a faixa ocupava, e a diferença empurrava a
+   * linha MODE para além da borda inferior do painel, que tem overflow:hidden
+   * no CEP. O sintoma era o conteúdo dos sliders cortado na base.
    */
   function reservedBottomHeight(el) {
     var total = 0;
-    ['.tabs', '.tab-body', '.status-bar'].forEach(function (sel) {
+    ['.limit-panel', '.tabs', '.tab-body', '.status-bar'].forEach(function (sel) {
       var node = el.querySelector(sel);
       if (node && node.offsetHeight > 0) total += node.offsetHeight;
     });

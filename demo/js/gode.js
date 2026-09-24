@@ -128,8 +128,23 @@ window.Gode = (function () {
 
   function applyPick(point) {
     const picked = sampleArea(point.x, point.y, Math.max(2, brushSize / 5));
-    // Conta-gotas captura a cor exata que está no godê
+    // Conta-gotas captura a cor exata que está no godê. A gravação no
+    // Photoshop é feita em pushPickNow, chamada no down e no up — não a cada
+    // movimento, senão um arrasto viraria uma enxurrada de escritas.
     if (picked) S.setRgb(picked.r, picked.g, picked.b, { commit: true, relock: true });
+  }
+
+  /**
+   * Grava a cor do conta-gotas no Photoshop na HORA, furando o debounce de
+   * 60ms da ponte.
+   *
+   * O debounce existe para agrupar as centenas de escritas de um arrasto
+   * contínuo. A seleção do conta-gotas é pontual, e ali o atraso é sentido
+   * como lentidão — o `pushNow` cancela o timer e grava imediatamente. É
+   * chamado no início e no fim do gesto, não em cada movimento.
+   */
+  function pushPickNow() {
+    if (window.PSBridge && window.PSBridge.pushNow) window.PSBridge.pushNow();
   }
 
   /* ---------------- undo/redo do canvas ---------------- */
@@ -158,19 +173,34 @@ window.Gode = (function () {
 
   /* ---------------- eventos ---------------- */
 
+  /**
+   * A ferramenta em vigor NESTE gesto.
+   *
+   * Alt segurado força o conta-gotas, lido direto do evento de ponteiro
+   * (`evt.altKey`) em vez de depender do keydown/keyup. No CEP o Photoshop
+   * disputa a tecla Alt e esses eventos se perdem com frequência — o keyup
+   * some e a ferramenta ficava presa no conta-gotas, ou o keydown não chegava
+   * e o clique pintava em vez de capturar. Perguntando o estado do Alt no
+   * próprio clique, o gesto acerta mesmo quando o teclado escapou.
+   */
+  function toolFor(evt) {
+    return evt.altKey ? 'pick' : tool;
+  }
+
   function onDown(evt) {
     if (evt.button === 1) return;  // botão do meio é pan, não pintura
     const point = toLocal(evt);
+    const active = toolFor(evt);
     drawing = true;
     lastPoint = null;
     carried = null;
     canvas.setPointerCapture(evt.pointerId);
 
     // Salva snapshot antes de começar a pintar (para o undo)
-    if (tool !== 'pick') saveSnapshot();
+    if (active !== 'pick') saveSnapshot();
 
-    if (tool === 'pick') { applyPick(point); return; }
-    if (tool === 'brush') applyBrush(point);
+    if (active === 'pick') { applyPick(point); pushPickNow(); return; }
+    if (active === 'brush') applyBrush(point);
     else applySmudge(point);
     lastPoint = point;
   }
@@ -178,9 +208,10 @@ window.Gode = (function () {
   function onMove(evt) {
     if (!drawing) return;
     const point = toLocal(evt);
+    const active = toolFor(evt);
 
-    if (tool === 'pick') applyPick(point);
-    else if (tool === 'brush') applyBrush(point);
+    if (active === 'pick') applyPick(point);
+    else if (active === 'brush') applyBrush(point);
     else applySmudge(point);
 
     lastPoint = point;
@@ -192,6 +223,9 @@ window.Gode = (function () {
     lastPoint = null;
     carried = null;
     if (canvas.hasPointerCapture(evt.pointerId)) canvas.releasePointerCapture(evt.pointerId);
+    // Se o gesto foi conta-gotas, garante que a cor final chegou ao Photoshop
+    // sem esperar o debounce (o move não grava, só o painel acompanha).
+    if (toolFor(evt) === 'pick') pushPickNow();
   }
 
   /* ---------------- superfície ---------------- */
@@ -333,6 +367,19 @@ window.Gode = (function () {
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerup', onUp);
     canvas.addEventListener('pointercancel', onUp);
+
+    /**
+     * Cursor de conta-gotas enquanto o Alt está pressionado sobre o godê,
+     * mesmo sem clicar — dá o retorno visual de que a captura está armada.
+     * Lê `evt.altKey` do próprio movimento, então não depende do keydown do
+     * Alt ter chegado. Ao soltar o Alt (ou se o keyup se perdeu, no próximo
+     * movimento sem Alt), o cursor volta ao da ferramenta base.
+     */
+    canvas.addEventListener('pointermove', (evt) => {
+      if (drawing) return;
+      canvas.style.cursor = evt.altKey ? 'copy'
+        : (tool === 'pick' ? 'copy' : 'crosshair');
+    });
 
     // Zoom com Ctrl + scroll (listener no wrapper)
     wrapper.addEventListener('wheel', (evt) => {
@@ -477,10 +524,17 @@ window.Gode = (function () {
         }
       }
 
-      if (evt.key === 'Shift' && tool !== 'smudge') {
+      /**
+       * Shift e Alt ativam ferramentas temporárias. A guarda `!prevTool`
+       * garante idempotência: um keydown repetido (auto-repeat do teclado, ou
+       * um segundo keydown sem keyup no meio — comum quando o Photoshop
+       * intercepta a tecla) não sobrescreve `prevTool` com 'smudge'/'pick', o
+       * que faria o keyup restaurar a ferramenta errada.
+       */
+      if (evt.key === 'Shift' && !prevTool && tool !== 'smudge') {
         prevTool = tool;
         setTool('smudge');
-      } else if (evt.key === 'Alt' && tool !== 'pick') {
+      } else if (evt.key === 'Alt' && !prevTool) {
         evt.preventDefault();  // previne o menu do navegador
         prevTool = tool;
         setTool('pick');
@@ -489,13 +543,23 @@ window.Gode = (function () {
 
     document.addEventListener('keyup', (evt) => {
       if (!prevTool) return;
-      if (evt.key === 'Shift' && tool === 'smudge') {
-        setTool(prevTool);
-        prevTool = null;
-      } else if (evt.key === 'Alt' && tool === 'pick') {
+      // Restaura no soltar de Shift OU Alt. Não exijo que `tool` esteja em
+      // 'smudge'/'pick': se o usuário trocou de ferramenta no meio, ou um
+      // evento se perdeu, o certo ainda é voltar ao que havia antes do atalho.
+      if (evt.key === 'Shift' || evt.key === 'Alt') {
         setTool(prevTool);
         prevTool = null;
       }
+    });
+
+    /**
+     * Rede de segurança para o keyup que o Photoshop engole: se o painel
+     * perde o foco com um atalho temporário ativo, o keyup nunca chega e a
+     * ferramenta ficaria presa. Ao voltar o foco (ou ao mover o mouse sem a
+     * tecla), restauramos a ferramenta base.
+     */
+    window.addEventListener('blur', () => {
+      if (prevTool) { setTool(prevTool); prevTool = null; }
     });
 
     /**

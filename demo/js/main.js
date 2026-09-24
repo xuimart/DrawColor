@@ -6,7 +6,21 @@
   'use strict';
 
   /** Versão local do plugin — atualizada a cada release. */
-  const DRAWCOLOR_VERSION = '1.0.0';
+  const DRAWCOLOR_VERSION = '1.0.1';
+
+  /**
+   * De onde vem o aviso de atualização. É um version.json no servidor da
+   * Xuimart, subido por FTP (ver PADRAO_PLUGINS_XUIMART.md). Fica separado do
+   * GitHub de propósito: publicar a release e AVISAR os usuários viram dois
+   * passos, então dá para subir o instalador, testar o link, e só então editar
+   * o version.json para disparar a notificação para todo mundo.
+   *
+   * Formato esperado:
+   *   { "version": "1.0.1",
+   *     "downloadUrl": "https://github.com/.../releases/latest/download/DrawColor_Setup.exe",
+   *     "changelog": "Texto curto do que mudou" }
+   */
+  const UPDATE_CHECK_URL = 'https://www.xuimart.com.br/drawcolor/version.json';
 
   const C = window.Color;
   const S = window.AppState;
@@ -829,8 +843,11 @@
     // Fora do CEP também é no-op.
     if (window.PanelSync) window.PanelSync.init();
 
+    // Mostra a versão atual e liga o botão de verificação manual do menu.
+    initUpdateUI();
+
     // Verifica se há atualização disponível no GitHub (uma vez por sessão).
-    checkForUpdate();
+    checkForUpdate(false);
   }
 
   /* ---------------- License status handling ---------------- */
@@ -913,37 +930,118 @@
   }
 
   /**
-   * Checa a última release no GitHub e mostra badge se há versão nova.
-   * Roda uma vez por sessão (sessionStorage) e falha silenciosamente.
+   * Preenche a versão no menu e liga o botão de verificação manual.
+   * O botão fica no menu "Sobre" e chama checkForUpdate no modo manual.
    */
-  function checkForUpdate() {
-    try {
-      // Só checa uma vez por sessão
-      if (sessionStorage.getItem('drawcolor-update-checked')) return;
+  function initUpdateUI() {
+    var ver = document.getElementById('aboutVersion');
+    if (ver) ver.textContent = DRAWCOLOR_VERSION;
 
-      fetch('https://api.github.com/repos/xuimart/DrawColor/releases/latest', {
-        cache: 'no-store'
-      })
+    var btn = document.getElementById('checkUpdateBtn');
+    if (btn) btn.addEventListener('click', function () { checkForUpdate(true); });
+
+    // O banner é role="button": Enter e Espaço disparam o clique, como um botão.
+    var banner = document.getElementById('updateBanner');
+    if (banner) {
+      banner.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (typeof banner.onclick === 'function') banner.onclick();
+        }
+      });
+    }
+  }
+
+  /**
+   * Lê o version.json do servidor e decide se há atualização.
+   *
+   * Dois modos:
+   *   - automático (manual = false): roda uma vez por sessão, em silêncio. Se
+   *     houver versão nova, mostra o banner no topo; senão não faz nada.
+   *   - manual (manual = true): disparado pelo botão do menu. Ignora o cache de
+   *     sessão e sempre dá retorno na linha de status — inclusive "já está
+   *     atualizado", que o modo automático omite de propósito.
+   *
+   * O `?t=` na URL fura qualquer cache (do CEP, de proxy) para o aviso não
+   * chegar atrasado quando o version.json muda.
+   */
+  function checkForUpdate(manual) {
+    var status = document.getElementById('updateStatus');
+    var setStatus = function (msg) { if (status) status.textContent = msg; };
+
+    try {
+      if (!manual && sessionStorage.getItem('drawcolor-update-checked')) return;
+
+      if (manual) setStatus('Verificando…');
+
+      fetch(UPDATE_CHECK_URL + '?t=' + Date.now(), { cache: 'no-store' })
         .then(function (res) {
-          if (!res.ok) return;
+          if (!res.ok) throw new Error('http ' + res.status);
           return res.json();
         })
         .then(function (data) {
-          if (!data || !data.tag_name) return;
+          if (!data || !data.version) throw new Error('version.json sem campo version');
 
-          if (isNewerVersion(data.tag_name, DRAWCOLOR_VERSION)) {
-            var badge = document.getElementById('updateBadge');
-            if (badge) badge.hidden = false;
+          var nova = isNewerVersion(data.version, DRAWCOLOR_VERSION);
+          if (nova) showUpdateBanner(data);
+
+          if (manual) {
+            setStatus(nova
+              ? 'Nova versão ' + data.version + ' disponível.'
+              : 'Você está na versão mais recente.');
           }
 
-          sessionStorage.setItem('drawcolor-update-checked', '1');
+          if (!manual) sessionStorage.setItem('drawcolor-update-checked', '1');
         })
         .catch(function () {
-          // Sem internet ou rate limit — ignora silenciosamente
+          // Automático falha em silêncio (sem internet, ou version.json ainda
+          // não publicado). No manual o usuário pediu, então merece retorno.
+          if (manual) setStatus('Não foi possível verificar agora. Tente mais tarde.');
         });
     } catch (e) {
-      // Ambiente sem fetch ou sessionStorage — ignora
+      if (manual) setStatus('Não foi possível verificar agora.');
     }
+  }
+
+  /**
+   * Mostra o banner de atualização no topo do painel.
+   *
+   * O link de download vem do próprio version.json (`downloadUrl`), então trocar
+   * para onde o instalador é hospedado é uma edição de servidor, sem rebuild do
+   * plugin. Clicar abre no navegador padrão — no CEP via cep.util, com fallback
+   * para window.open nos outros ambientes.
+   */
+  function showUpdateBanner(data) {
+    var banner = document.getElementById('updateBanner');
+    if (!banner) return;
+
+    var texto = 'Nova versão ' + data.version + ' disponível';
+    if (data.changelog) texto += ' — ' + data.changelog;
+    texto += '  ·  clique para baixar';
+
+    var label = document.getElementById('updateBannerText');
+    if (label) label.textContent = texto;
+
+    var url = data.downloadUrl ||
+      'https://github.com/xuimart/DrawColor/releases/latest';
+
+    banner.onclick = function () {
+      try {
+        if (window.cep && window.cep.util && window.cep.util.openURLInDefaultBrowser) {
+          window.cep.util.openURLInDefaultBrowser(url);
+        } else if (window.require) {
+          // UXP: o shell abre URLs externas por aqui.
+          try { window.require('uxp').shell.openExternal(url); }
+          catch (e) { window.open(url, '_blank'); }
+        } else {
+          window.open(url, '_blank');
+        }
+      } catch (e) {
+        window.open(url, '_blank');
+      }
+    };
+
+    banner.hidden = false;
   }
 
   /**

@@ -30,3 +30,6 @@ build_1.0.0/_csc_out.txt
 build_1.0.0/_csc_err.txt
 DrawColor-v1.0.0-beta.zip
 _release/
+
+# Material de referencia de outros plugins (consulta, nao faz parte do DrawColor)
+_reference/

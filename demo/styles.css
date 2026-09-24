@@ -677,24 +677,31 @@ body {
 .menu-btn[aria-expanded="true"] { color: var(--text); background: var(--bg-raised-hi); }
 .menu-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
-/* Badge de atualização disponível */
-.update-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--accent, #e63946);
-  color: white;
-  font-size: 11px;
-  text-decoration: none;
+/* Banner de atualização disponível — faixa no topo, clicável, aparece só
+   quando showUpdateBanner detecta versão nova no version.json. */
+.update-banner {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  z-index: 60;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  background: var(--accent, #de2246);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: center;
+  cursor: pointer;
+  border: none;
   animation: pulse-update 2s ease-in-out infinite;
 }
-.update-badge[hidden] { display: none; }
+.update-banner:hover { filter: brightness(1.08); }
+.update-banner:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
+.update-banner[hidden] { display: none; }
 @keyframes pulse-update {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  50% { opacity: 0.82; }
 }
 
 .panel-menu {

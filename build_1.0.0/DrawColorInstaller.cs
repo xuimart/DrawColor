@@ -15,7 +15,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("DrawColor Installer")]
 [assembly: AssemblyDescription("Instalador do Plugin DrawColor para Adobe Photoshop")]
-[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.0.1.0")]
 
 namespace DrawColorInstaller
 {
@@ -109,7 +109,7 @@ namespace DrawColorInstaller
         public InstallerForm()
         {
             // Janela
-            this.Text            = "Instalador DrawColor v1.0.0";
+            this.Text            = "Instalador DrawColor v1.0.1";
             this.Size            = new Size(780, 540);
             this.MinimumSize     = new Size(780, 540);
             this.MaximumSize     = new Size(780, 540);
@@ -139,11 +139,18 @@ namespace DrawColorInstaller
         void ShowChangelogOnce()
         {
             string changelog =
-                "DrawColor v1.0.0 - Primeira versao:\n\n" +
+                "DrawColor v1.0.1 - Novidades:\n\n" +
+                "  - Roda RYB (do pintor) alem da RGB: o complementar\n" +
+                "    do vermelho passa a ser o verde\n" +
+                "  - Harmonias no estilo Coolorus: abertura por um\n" +
+                "    unico angulo, com os bracos estruturais travados\n" +
+                "  - Correcao: a base do painel nao e mais cortada\n" +
+                "    quando a janela fica compacta\n" +
+                "  - Verificacao de atualizacao no menu\n\n" +
                 "RECURSOS:\n" +
                 "  - Roda de cores com triangulo, quadrado e disco\n" +
                 "  - Harmonias: complementar, analoga, triade,\n" +
-                "    tetrade e split-complementar\n" +
+                "    tetrade e analoga acentuada\n" +
                 "  - Gamut Masking com edicao de vertices\n" +
                 "  - Sliders RGB, HSV, LAB, CMYK e B/W\n" +
                 "  - Mixers de cor com historico\n" +
@@ -155,7 +162,7 @@ namespace DrawColorInstaller
                 "Apoie: https://livepix.gg/xuimart";
             MessageBox.Show(
                 changelog,
-                "Novidades do DrawColor v1.0.0",
+                "Novidades do DrawColor v1.0.1",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
             );
@@ -220,7 +227,7 @@ namespace DrawColorInstaller
 
             lblVersion = new Label
             {
-                Text      = "v1.0.0",
+                Text      = "v1.0.1",
                 Font      = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = TEXT_DIM,
                 Location  = new Point(720, 16),
@@ -229,11 +236,11 @@ namespace DrawColorInstaller
             pnlFooter.Controls.Add(lblVersion);
 
             btnPix = CreateFlatButton("Pix", CYAN_BTN, Color.FromArgb(0, 160, 160), new Point(556, 10), new Size(85, 28));
-            btnPix.Click += (s, e) => MessageBox.Show("Obrigado pelo apoio!\nChave Pix: pix@xuimart.com", "Apoiar via Pix", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            btnPix.Click += (s, e) => { try { System.Diagnostics.Process.Start("https://livepix.gg/xuimart"); } catch { } };
             pnlFooter.Controls.Add(btnPix);
 
             btnKofi = CreateFlatButton("Ko-fi", Color.FromArgb(41, 171, 226), Color.FromArgb(20, 130, 180), new Point(648, 10), new Size(64, 28));
-            btnKofi.Click += (s, e) => { try { System.Diagnostics.Process.Start("https://ko-fi.com"); } catch { } };
+            btnKofi.Click += (s, e) => { try { System.Diagnostics.Process.Start("https://ko-fi.com/xuimart"); } catch { } };
             pnlFooter.Controls.Add(btnKofi);
 
             // -- PAINEL ESQUERDO (Recursos) ------------------------------------
@@ -687,7 +694,7 @@ namespace DrawColorInstaller
                         zipPath = tmpPath;
                         var sizeMB = new FileInfo(zipPath).Length / 1024 / 1024;
                         if (lblPlugin != null) lblPlugin.Text = "Plugin 100% embutido no EXE (" + sizeMB + " MB).";
-                        Log("Plugin carregado do instalador (v1.0.0 100% embutido).", Color.FromArgb(0,200,100));
+                        Log("Plugin carregado do instalador (v1.0.1 100% embutido).", Color.FromArgb(0,200,100));
                         UpdateButtonState();
                         return;
                     }
@@ -1337,11 +1344,11 @@ namespace DrawColorInstaller
 
             // Botoes de apoio
             var btnPixS = CreateFlatButton("Pix", CYAN_BTN, Color.FromArgb(0, 160, 160), new Point(16, ry), new Size(168, 32));
-            btnPixS.Click += (s2, e2) => MessageBox.Show("Obrigado pelo apoio!\nChave Pix: pix@xuimart.com", "Apoiar via Pix", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            btnPixS.Click += (s2, e2) => { try { System.Diagnostics.Process.Start("https://livepix.gg/xuimart"); } catch { } };
             pnlSRight.Controls.Add(btnPixS);
 
             var btnKofiS = CreateFlatButton("Ko-fi", Color.FromArgb(41, 171, 226), Color.FromArgb(20, 130, 180), new Point(202, ry), new Size(168, 32));
-            btnKofiS.Click += (s2, e2) => { try { System.Diagnostics.Process.Start("https://ko-fi.com"); } catch { } };
+            btnKofiS.Click += (s2, e2) => { try { System.Diagnostics.Process.Start("https://ko-fi.com/xuimart"); } catch { } };
             pnlSRight.Controls.Add(btnKofiS);
         }
 
