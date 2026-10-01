@@ -6,7 +6,7 @@
   'use strict';
 
   /** Versão local do plugin — atualizada a cada release. */
-  const DRAWCOLOR_VERSION = '1.0.2';
+  const DRAWCOLOR_VERSION = '1.0.3';
 
   /**
    * De onde vem o aviso de atualização. É um version.json no servidor da
@@ -778,22 +778,11 @@
     // Depois dos painéis: o docking move nós já montados
     window.Docking.init();
 
-    // Editor de layout: inicializa depois de toda a UI estar pronta
-    window.LayoutEditor.init();
-
-    // Layout editor toggle button in header
-    var layoutBtn = document.createElement('button');
-    layoutBtn.className = 'menu-btn';
-    layoutBtn.textContent = '⊞';
-    layoutBtn.title = 'Modo de organização';
-    layoutBtn.setAttribute('aria-label', 'Alternar modo de organização');
-    layoutBtn.addEventListener('click', function() {
-      window.LayoutEditor.toggle();
-    });
-    var header = document.querySelector('.panel-header');
-    if (header) {
-      header.insertBefore(layoutBtn, header.querySelector('.menu-btn'));
-    }
+    // Modo de organização (⊞) desativado: o layout responsivo já distribui as
+    // ferramentas sozinho e o botão não é mais necessário. layout-editor.js
+    // continua no projeto (e nos testes), só não é inicializado nem tem botão
+    // no cabeçalho. Para religar, volte a chamar LayoutEditor.init() aqui e
+    // recrie o botão com a classe `menu-btn layout-btn`.
 
     // Re-aplica layout quando o perfil ativo muda
     window.LayoutStore.subscribe(function() { L.applyLayout(); });
@@ -974,11 +963,7 @@
 
       if (manual) setStatus('Verificando…');
 
-      fetch(UPDATE_CHECK_URL + '?t=' + Date.now(), { cache: 'no-store' })
-        .then(function (res) {
-          if (!res.ok) throw new Error('http ' + res.status);
-          return res.json();
-        })
+      fetchVersionJson(UPDATE_CHECK_URL + '?t=' + Date.now())
         .then(function (data) {
           if (!data || !data.version) throw new Error('version.json sem campo version');
 
@@ -1001,6 +986,74 @@
     } catch (e) {
       if (manual) setStatus('Não foi possível verificar agora.');
     }
+  }
+
+  /**
+   * Baixa e interpreta o version.json.
+   *
+   * No CEP a requisição vai pelo Node (o manifest liga --enable-nodejs e
+   * --mixed-context). O `fetch` do painel sai de uma página file:// e o
+   * servidor não manda Access-Control-Allow-Origin, então dependendo da versão
+   * do CEF a resposta era barrada por CORS e a verificação falhava calada. O
+   * Node não tem essa regra.
+   *
+   * Fora do CEP (UXP, navegador) fica o `fetch`. No UXP o domínio precisa
+   * estar em requiredPermissions.network do manifest.
+   *
+   * Escrito para o Node antigo do CEP 9 (Photoshop 2019): https.get(url, cb)
+   * com dois argumentos e sem URL global do Node.
+   */
+  function fetchVersionJson(url) {
+    var https = null;
+    try {
+      /* global cep_node */
+      if (typeof cep_node !== 'undefined' && cep_node && cep_node.require) {
+        https = cep_node.require('https');
+      }
+    } catch (e) {
+      https = null;
+    }
+
+    if (!https) {
+      return fetch(url, { cache: 'no-store' }).then(function (res) {
+        if (!res.ok) throw new Error('http ' + res.status);
+        return res.json();
+      });
+    }
+
+    return new Promise(function (resolve, reject) {
+      var get = function (u, hops) {
+        var req = https.get(u, function (res) {
+          var code = res.statusCode;
+          if (code >= 300 && code < 400 && res.headers.location && hops < 3) {
+            res.resume();
+            get(new window.URL(res.headers.location, u).toString(), hops + 1);
+            return;
+          }
+          if (code !== 200) {
+            res.resume();
+            reject(new Error('http ' + code));
+            return;
+          }
+          var body = '';
+          res.setEncoding('utf8');
+          res.on('data', function (chunk) { body += chunk; });
+          res.on('end', function () {
+            try {
+              resolve(JSON.parse(body.replace(/^\uFEFF/, '')));
+            } catch (e) {
+              reject(e);
+            }
+          });
+        });
+        req.on('error', reject);
+        req.setTimeout(10000, function () {
+          req.abort();
+          reject(new Error('timeout'));
+        });
+      };
+      get(url, 0);
+    });
   }
 
   /**

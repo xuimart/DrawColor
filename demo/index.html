@@ -31,6 +31,17 @@
               aria-controls="panelMenu" aria-label="Opções do painel">☰</button>
 
       <div class="panel-menu" id="panelMenu" role="menu" hidden>
+        <!-- Versão e atualização no topo: no fim do menu ficavam abaixo da
+             borda de um painel baixo e não havia como chegar até elas. -->
+        <p class="menu-group">Sobre</p>
+        <div class="menu-row">
+          <span class="menu-label">Versão <b id="aboutVersion">—</b></span>
+          <button type="button" id="checkUpdateBtn" class="rot-btn wide">Verificar atualização</button>
+        </div>
+        <p class="menu-hint" id="updateStatus"></p>
+
+        <hr class="menu-sep">
+
         <p class="menu-group">Roda</p>
         <div class="menu-row" role="radiogroup" aria-label="Espaço do círculo cromático">
           <span class="menu-label">Círculo</span>
@@ -145,14 +156,6 @@
           Alt+arraste move sem entrar em edição.
         </p>
 
-        <hr class="menu-sep">
-
-        <p class="menu-group">Sobre</p>
-        <div class="menu-row">
-          <span class="menu-label">Versão <b id="aboutVersion">—</b></span>
-          <button type="button" id="checkUpdateBtn" class="rot-btn wide">Verificar atualização</button>
-        </div>
-        <p class="menu-hint" id="updateStatus"></p>
       </div>
     </div>
 

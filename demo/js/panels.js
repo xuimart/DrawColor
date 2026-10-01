@@ -1120,6 +1120,12 @@ window.Panels = (function () {
     const tabBody = panel && panel.querySelector('.tab-body');
     if (!panel || !tabBody) return;
 
+    // Lado a lado: o corpo vai do topo da coluna até o rodapé e rola por
+    // dentro, então --body-h não define nada ali. Medir nessa disposição daria
+    // a altura da coluna estreita (linha MODE quebrada) e realimentaria a
+    // escolha da disposição. layout.js remede ao voltar para empilhada.
+    if (panel.classList.contains('layout-side')) return;
+
     const activePane = tabBody.querySelector('.pane.is-active');
     if (!activePane) return;
 

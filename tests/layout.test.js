@@ -105,6 +105,149 @@ describe('computeScale: altura reservada pela faixa de baixo', function() {
   });
 });
 
+describe('computeOffsetX: a área da roda fica centralizada na largura que sobra', function() {
+  /**
+   * Num painel largo e baixo a escala vem da altura, e a área de referência
+   * (628 unidades) fica mais estreita que o painel. Antes ela ficava presa à
+   * esquerda e toda a sobra ia para a direita. O deslocamento divide a sobra
+   * ao meio.
+   */
+  it('a sobra fica igual dos dois lados', function() {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 200, max: 3000, noNaN: true }),
+        fc.double({ min: 0.25, max: 2, noNaN: true }),
+        function(w, s) {
+          var area = 628 * s;
+          fc.pre(area <= w);
+          var ox = L.computeOffsetX(w, s);
+          var direita = w - area - ox;
+          return Math.abs(ox - direita) < 1e-9;
+        }
+      ),
+      { numRuns: 200 }
+    );
+  });
+
+  it('nunca é negativo: painel estreito demais continua alinhado à esquerda', function() {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0, max: 3000, noNaN: true }),
+        fc.double({ min: 0.25, max: 2, noNaN: true }),
+        function(w, s) {
+          return L.computeOffsetX(w, s) >= 0;
+        }
+      ),
+      { numRuns: 200 }
+    );
+    if (L.computeOffsetX(0, 1) !== 0) throw new Error('sem largura o deslocamento deveria ser 0');
+  });
+
+  it('o centro da roda acompanha o deslocamento', function() {
+    // centerPx() é o que posiciona as âncoras e o que o editor usa para
+    // converter o ponteiro; sem o deslocamento ali, os satélites ficariam
+    // para trás enquanto a roda (posicionada pelo CSS) andava.
+    var c = L.centerPx();
+    var esperado = L.offsetX() + L.REFERENCE.wheelCenter.x * L.scale();
+    if (Math.abs(c.x - esperado) > 1e-9) throw new Error('centerPx ignorou o deslocamento');
+  });
+});
+
+describe('computePlan: disposição mista (lado a lado + ferramentas nas bordas)', function() {
+  /**
+   * Faixa de baixo como no Photoshop em escala pequena: abas e corpo no piso
+   * em px, status escondido (a ponte está conectada).
+   */
+  var PS = { tabH: 28, bodyH: 128, statusH: 0, limitRowH: 24 };
+  var LIVRE = { allowSide: true, allowSpread: true };
+
+  function falha(msg) { throw new Error(msg); }
+
+  it('dock estreito e alto fica como sempre: empilhado, sem espalhar', function() {
+    var p = L.computePlan(380, 600, PS, LIVRE);
+    if (p.mode !== 'stacked') falha('esperava empilhado, veio ' + p.mode);
+    if (p.spread) falha('não há sobra lateral para espalhar');
+    if (p.limit !== 'row') falha('o "Limitar cores" deveria ficar na faixa');
+    var esperado = L.computeScale(380, 600, 28 + 128 + 24);
+    if (Math.abs(p.scale - esperado) > 1e-12) falha('escala mudou: ' + p.scale + ' vs ' + esperado);
+    if (p.oy !== 0) falha('empilhado não tem deslocamento vertical');
+  });
+
+  it('painel largo e baixo vai para lado a lado com a roda bem maior', function() {
+    var p = L.computePlan(700, 430, PS, LIVRE);
+    var empilhado = L.computePlan(700, 430, PS, { allowSide: false, allowSpread: true });
+    if (p.mode !== 'side') falha('esperava lado a lado, veio ' + p.mode);
+    if (!(p.scale >= empilhado.scale * 1.25)) falha('lado a lado sem ganho de 25%');
+    if (Math.abs(p.areaW + p.colW - 700) > 1e-9) falha('área + coluna deveria dar a largura');
+    if (p.colW < 240) falha('coluna estreita demais: ' + p.colW);
+  });
+
+  it('largura média: empilhado, ferramentas nas bordas e "Limitar" no vão', function() {
+    var p = L.computePlan(530, 390, PS, LIVRE);
+    if (p.mode !== 'stacked') falha('esperava empilhado, veio ' + p.mode);
+    if (!p.spread) falha('deveria espalhar as ferramentas');
+    if (p.limit !== 'gutter') falha('o "Limitar" deveria ir para o vão, veio ' + p.limit);
+    // Sem a linha do "Limitar" na faixa, a roda ganha a altura dela.
+    var comLinha = L.computeScale(530, 390, 28 + 128 + 24);
+    if (!(p.scale > comLinha)) falha('tirar o bloco da faixa não devolveu altura à roda');
+  });
+
+  it('no modo de organização não espalha (as posições têm de bater com as âncoras)', function() {
+    var p = L.computePlan(530, 390, PS, { allowSide: true, allowSpread: false });
+    if (p.spread) falha('espalhou durante a organização');
+    if (p.limit !== 'row') falha('sem espalhar o vão não existe');
+    // Organizar não troca a disposição.
+    [[530, 390], [700, 430], [380, 600], [1100, 500]].forEach(function(t) {
+      var livre = L.computePlan(t[0], t[1], PS, LIVRE);
+      var org = L.computePlan(t[0], t[1], PS, { allowSide: true, allowSpread: false });
+      if (livre.mode !== org.mode) falha('organizar trocou a disposição em ' + t.join('x'));
+      if (org.spread) falha('espalhou durante a organização em ' + t.join('x'));
+    });
+  });
+
+  it('sem altura do host (UXP, demo) nunca vai para lado a lado', function() {
+    var p = L.computePlan(700, 430, PS, { allowSide: false, allowSpread: true });
+    if (p.mode !== 'stacked') falha('lado a lado sem allowSide');
+    if (L.computePlan(700, 0, PS, LIVRE).mode !== 'stacked') falha('lado a lado sem altura');
+  });
+
+  it('histerese: já em lado a lado, não volta por diferença pequena', function() {
+    // Procura uma largura em que o ganho fica entre 1.05 e 1.15.
+    var achou = false;
+    for (var w = 500; w <= 900 && !achou; w += 2) {
+      var novo = L.computePlan(w, 430, PS, LIVRE);
+      var fica = L.computePlan(w, 430, PS, { allowSide: true, allowSpread: true, prevMode: 'side' });
+      if (novo.mode === 'stacked' && fica.mode === 'side') achou = true;
+    }
+    if (!achou) falha('nenhuma faixa de histerese entre 500 e 900 px');
+  });
+
+  it('em qualquer tamanho a área da roda cabe no painel e o vão é real', function() {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 200, max: 2000 }),
+        fc.integer({ min: 200, max: 1400 }),
+        fc.boolean(),
+        function(w, h, side) {
+          var p = L.computePlan(w, h, PS, { allowSide: side, allowSpread: true });
+          if (p.ox < 0 || p.oy < 0) return false;
+          if (p.mode === 'side') {
+            if (p.scale > 0.25 + 1e-9) {
+              if (628 * p.scale > p.areaW + 1e-6) return false;
+              if (608 * p.scale > h + 1e-6) return false;
+            }
+            if (p.ox + 628 * p.scale > p.areaW + 1e-6 && p.scale > 0.25 + 1e-9) return false;
+          }
+          if (p.limit === 'gutter' && !(p.gutter.w >= 120 + 12)) return false;
+          if (p.limit === 'gutter' && !p.spread) return false;
+          return true;
+        }
+      ),
+      { numRuns: 300 }
+    );
+  });
+});
+
 describe('Feature: layout-parity-editor, Property 4: Proportional Scaling Invariant', function() {
   // **Validates: Requirements 7.4, 7.5**
   it('ratio of any two measurements is preserved within 0.5%', function() {

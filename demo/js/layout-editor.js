@@ -298,6 +298,9 @@ window.LayoutEditor = (function () {
     if (p) {
       p.classList.add('layout-editing');
     }
+    // Organizando, as ferramentas voltam para as âncoras (sem espalhar), senão
+    // o arraste converteria o ponteiro contra uma posição que não é a dela.
+    if (window.LAYOUT && typeof window.LAYOUT.applyLayout === 'function') window.LAYOUT.applyLayout();
     // Make movable controls focusable for keyboard navigation
     var controls = getMovableControls();
     for (var i = 0; i < controls.length; i++) {
@@ -313,6 +316,7 @@ window.LayoutEditor = (function () {
       p.classList.remove('layout-editing');
       clearGuides(p);
     }
+    if (window.LAYOUT && typeof window.LAYOUT.applyLayout === 'function') window.LAYOUT.applyLayout();
     // Remove tabindex from controls
     var controls = getMovableControls();
     for (var i = 0; i < controls.length; i++) {

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DrawColor · teste de responsividade</title>
+<!--
+  Bancada de teste da responsividade do painel.
+
+  Carrega o build CEP real (dist/cep/index.html) dentro de um quadro que imita
+  o dock do Photoshop: no CEP o painel ocupa exatamente o espaço que o
+  Photoshop dá, e é isso que o iframe reproduz. A demo comum (index.html) não
+  serve para isso, porque lá o painel tem tamanho próprio e cresce sozinho.
+
+  Depois de mexer no código, rode `node build/build.js` e clique em
+  "Recarregar" para ver a mudança.
+
+  Diferença conhecida: no Photoshop a barra de status do rodapé fica oculta;
+  aqui, sem Photoshop conectado, ela aparece. São ~26px a mais embaixo.
+-->
+<style>
+  :root {
+    --bg: #0e0e14;
+    --raised: #20202e;
+    --raised-hi: #2a2a3a;
+    --divider: #37374b;
+    --text: #f0f0ff;
+    --dim: #8c8ca5;
+    --accent: #de2246;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 16px;
+    background: var(--bg);
+    color: var(--text);
+    font: 12px/1.4 "Segoe UI", system-ui, sans-serif;
+  }
+  h1 { font-size: 14px; margin: 0 0 4px; font-weight: 600; }
+  .hint { color: var(--dim); margin: 0 0 12px; max-width: 760px; }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .toolbar .sep { width: 1px; height: 22px; background: var(--divider); margin: 0 4px; }
+  button {
+    background: var(--raised);
+    border: 1px solid var(--divider);
+    color: var(--text);
+    border-radius: 3px;
+    padding: 5px 10px;
+    font: inherit;
+    cursor: pointer;
+  }
+  button:hover { background: var(--raised-hi); }
+  button.is-active { border-color: var(--accent); }
+  button:focus-visible { outline: 2px solid #7aa7ff; outline-offset: 1px; }
+
+  .size {
+    font-variant-numeric: tabular-nums;
+    color: var(--dim);
+    margin-left: 6px;
+  }
+  .size b { color: var(--text); }
+
+  /* Quadro principal: o usuário arrasta o canto inferior direito. */
+  .dock {
+    position: relative;
+    width: 380px;
+    height: 600px;
+    min-width: 200px;
+    min-height: 200px;
+    resize: both;
+    overflow: hidden;
+    border: 1px dashed var(--divider);
+    background: #181822;
+  }
+  .dock iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  /* Mosaico: todos os tamanhos lado a lado, para comparar de uma vez. */
+  .grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    align-items: flex-start;
+  }
+  .grid figure { margin: 0; }
+  .grid figcaption { color: var(--dim); margin-bottom: 4px; }
+  .grid .dock { resize: none; }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<h1>DrawColor · teste de responsividade</h1>
+<p class="hint">
+  O quadro abaixo imita o dock do Photoshop. Arraste o canto inferior direito
+  para redimensionar, ou use os tamanhos prontos. "Mosaico" mostra todos os
+  tamanhos ao mesmo tempo. Depois de alterar o código, rode
+  <code>node build/build.js</code> e clique em Recarregar.
+</p>
+
+<div class="toolbar" id="toolbar" role="toolbar" aria-label="Tamanhos do painel">
+  <!-- preenchido pelo script -->
+  <span class="sep" aria-hidden="true"></span>
+  <button type="button" id="btnGrid" aria-pressed="false">Mosaico</button>
+  <button type="button" id="btnReload">Recarregar</button>
+  <span class="size" id="size" aria-live="polite"></span>
+</div>
+
+<div id="single">
+  <div class="dock" id="dock">
+    <iframe id="frame" title="Painel DrawColor" src="../dist/cep/index.html"></iframe>
+  </div>
+</div>
+
+<div class="grid" id="grid" hidden></div>
+
+<script>
+  'use strict';
+
+  /**
+   * Tamanhos de teste. O de 380×600 é o tamanho inicial do manifest; 280×400 é
+   * o mínimo que o manifest permite. Os demais cobrem os casos que já deram
+   * problema: largo e baixo (sobra na lateral) e alto e estreito.
+   */
+  var PRESETS = [
+    { w: 280, h: 400, label: 'Mínimo' },
+    { w: 380, h: 600, label: 'Padrão' },
+    { w: 530, h: 390, label: 'Largo e baixo' },
+    { w: 700, h: 430, label: 'Muito largo' },
+    { w: 320, h: 820, label: 'Alto e estreito' },
+    { w: 600, h: 900, label: 'Grande' }
+  ];
+
+  var SRC = '../dist/cep/index.html';
+  var dock = document.getElementById('dock');
+  var frame = document.getElementById('frame');
+  var sizeEl = document.getElementById('size');
+  var toolbar = document.getElementById('toolbar');
+  var anchor = document.getElementById('btnGrid').previousElementSibling;
+  var single = document.getElementById('single');
+  var grid = document.getElementById('grid');
+  var btnGrid = document.getElementById('btnGrid');
+  var presetButtons = [];
+
+  function setSize(w, h) {
+    dock.style.width = w + 'px';
+    dock.style.height = h + 'px';
+  }
+
+  // O tamanho mostrado é o do conteúdo do quadro, que é o que o painel recebe.
+  function showSize() {
+    var w = dock.clientWidth, h = dock.clientHeight;
+    sizeEl.innerHTML = 'Painel: <b>' + w + ' × ' + h + '</b> px';
+    presetButtons.forEach(function (b) {
+      b.classList.toggle('is-active', +b.dataset.w === w && +b.dataset.h === h);
+    });
+  }
+
+  PRESETS.forEach(function (p) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.w = p.w;
+    b.dataset.h = p.h;
+    b.textContent = p.label + ' ' + p.w + '×' + p.h;
+    b.addEventListener('click', function () {
+      if (!grid.hidden) toggleGrid(false);
+      setSize(p.w, p.h);
+    });
+    toolbar.insertBefore(b, anchor);
+    presetButtons.push(b);
+  });
+
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(showSize).observe(dock);
+  }
+  showSize();
+
+  function buildGrid() {
+    grid.innerHTML = '';
+    PRESETS.forEach(function (p) {
+      var fig = document.createElement('figure');
+      var cap = document.createElement('figcaption');
+      cap.textContent = p.label + ' — ' + p.w + ' × ' + p.h;
+      var box = document.createElement('div');
+      box.className = 'dock';
+      box.style.width = p.w + 'px';
+      box.style.height = p.h + 'px';
+      var f = document.createElement('iframe');
+      f.title = 'Painel ' + p.w + '×' + p.h;
+      f.src = SRC;
+      box.appendChild(f);
+      fig.appendChild(cap);
+      fig.appendChild(box);
+      grid.appendChild(fig);
+    });
+  }
+
+  function toggleGrid(on) {
+    grid.hidden = !on;
+    single.hidden = on;
+    sizeEl.hidden = on;
+    btnGrid.setAttribute('aria-pressed', String(on));
+    btnGrid.classList.toggle('is-active', on);
+    // Monta os iframes só quando abre, e limpa ao fechar: seis painéis vivos
+    // ao mesmo tempo pesam.
+    if (on) buildGrid(); else grid.innerHTML = '';
+  }
+
+  btnGrid.addEventListener('click', function () { toggleGrid(grid.hidden); });
+
+  document.getElementById('btnReload').addEventListener('click', function () {
+    if (!grid.hidden) { buildGrid(); return; }
+    frame.src = SRC + '?t=' + Date.now();
+  });
+</script>
+</body>
+</html>

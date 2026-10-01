@@ -465,13 +465,13 @@ describe('Harmonia: abrir e fechar o esquema mantendo a composição', () => {
  * fator, então verificar em escala 1 basta.
  */
 const FORMAS = {
-  'harmony.1': { d: 44 }, 'harmony.2': { d: 44 }, 'harmony.3': { d: 44 },
-  'harmony.4': { d: 44 }, 'harmony.5': { d: 44 }, 'harmony.6': { d: 44 },
+  'harmony.1': { d: 50 }, 'harmony.2': { d: 50 }, 'harmony.3': { d: 50 },
+  'harmony.4': { d: 50 }, 'harmony.5': { d: 50 }, 'harmony.6': { d: 50 },
   'history.redo': { d: 44 }, 'history.undo': { d: 44 },
   'rail.dial.temperature': { d: 44 }, 'rail.dial.brightness': { d: 44 },
   'rail.lumlock': { d: 44 }, 'rail.valuecheck': { d: 44 },
   'swatch.fg': { d: 92 }, 'swatch.bg': { d: 72 }, 'swatch.swap': { d: 26 },
-  'sat.gamutmask': { d: 44 }, 'sat.shape': { d: 44 },
+  'sat.gamutmask': { d: 50 }, 'sat.shape': { d: 50 },
   'hex.field': { w: 100, h: 36 }
 };
 

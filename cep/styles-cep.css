@@ -32,6 +32,9 @@ html, body {
 
 /* O painel preenche o viewport inteiro do CEP. A altura vem do PS. */
 .panel {
+  /* Avisa layout.js que a altura vem do host e não de --u: só assim a
+     disposição lado a lado é segura (ver hostFillsHeight). */
+  --fill-host: 1;
   width: 100%;
   height: 100%;
   resize: none;

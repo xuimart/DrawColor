@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DrawColor · protótipo de layout responsivo</title>
+<!--
+  Protótipo para comparar disposições do painel em tamanhos diferentes.
+
+  Não é o painel real: os controles são caixas sem função. Mas a geometria é a
+  real — as posições vêm das âncoras de js/layout.js e a escala da roda usa a
+  mesma conta de computeScale(), então o tamanho da roda em cada opção é o que
+  ela teria de fato no Photoshop.
+
+  A altura da faixa de baixo (abas, sliders, "Limitar cores") é uma estimativa
+  fixa; no painel real ela varia um pouco conforme a aba aberta.
+-->
+<style>
+  :root {
+    --bg: #0e0e14; --panel: #181822; --raised: #20202e; --raised-hi: #2a2a3a;
+    --divider: #37374b; --text: #f0f0ff; --dim: #8c8ca5; --accent: #de2246;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text);
+         font: 12px/1.4 "Segoe UI", system-ui, sans-serif; }
+  h1 { font-size: 14px; margin: 0 0 4px; font-weight: 600; }
+  .hint { color: var(--dim); margin: 0 0 12px; max-width: 820px; }
+
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .toolbar .label { color: var(--dim); margin-right: 2px; }
+  .toolbar .sep { width: 1px; height: 22px; background: var(--divider); margin: 0 4px; }
+  button { background: var(--raised); border: 1px solid var(--divider); color: var(--text);
+           border-radius: 3px; padding: 5px 10px; font: inherit; cursor: pointer; }
+  button:hover { background: var(--raised-hi); }
+  button.is-active { border-color: var(--accent); }
+  button:focus-visible { outline: 2px solid #7aa7ff; outline-offset: 1px; }
+  .readout { color: var(--dim); font-variant-numeric: tabular-nums; margin: 6px 0 12px; }
+  .readout b { color: var(--text); }
+
+  /* Quadro que imita o dock do Photoshop */
+  .dock { position: relative; overflow: hidden; background: var(--panel);
+          border: 1px dashed var(--divider); }
+  #mainDock { width: 700px; height: 430px; min-width: 200px; min-height: 200px; resize: both; }
+
+  .compare { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+  .compare figure { margin: 0; }
+  .compare figcaption { margin-bottom: 4px; }
+  .compare figcaption small { color: var(--dim); display: block; }
+
+  /* ---------- peças do painel simulado ---------- */
+  .p { position: absolute; }
+  .title { color: var(--text); white-space: nowrap; }
+  .logo { color: var(--dim); letter-spacing: 1px; font-weight: 600; transform: translateX(-50%); white-space: nowrap; }
+  .menu { color: #c8c8e0; }
+  .btn { border-radius: 50%; background: var(--raised); border: 1px solid var(--divider);
+         transform: translate(-50%, -50%); }
+  .sw  { border-radius: 50%; border: 1px solid var(--divider); transform: translate(-50%, -50%); }
+  .hex { background: var(--bg); border: 1px solid var(--divider); transform: translate(-50%, -50%);
+         color: var(--text); display: flex; align-items: center; justify-content: center;
+         font-weight: 600; overflow: hidden; white-space: nowrap; }
+  .wheel { border-radius: 50%; transform: translate(-50%, -50%);
+           background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+  .wheel::before { content: ''; position: absolute; inset: 8.2%; border-radius: 50%; background: #2b2b2b; }
+  .wheel::after { content: ''; position: absolute; inset: 11%;
+                  background: linear-gradient(90deg, #000 0%, #b02020 100%);
+                  clip-path: polygon(96% 50%, 23% 8%, 23% 92%); }
+  .bar { border-radius: 2px; }
+  .num { background: var(--bg); border: 1px solid var(--divider); }
+  .tab { background: var(--bg); border: 1px solid var(--divider); border-bottom: none;
+         color: var(--dim); display: flex; align-items: center; justify-content: center; font-size: 11px; }
+  .tab.on { background: var(--raised); color: var(--text); border-color: var(--accent); }
+  .mode { color: var(--dim); font-size: 10px; white-space: nowrap; }
+  .card { background: var(--raised); border: 1px solid var(--divider); border-radius: 5px;
+          color: var(--text); font-size: 10px; padding: 4px 8px; overflow: hidden; }
+  .card .sub { color: var(--dim); }
+  .placeholder { border: 1px dashed var(--divider); color: var(--dim); font-size: 10px;
+                 display: flex; align-items: center; justify-content: center; text-align: center; }
+  .vline { background: var(--divider); width: 1px; }
+  .hline { background: var(--divider); height: 1px; }
+  .badge { right: 6px; bottom: 6px; background: rgba(0,0,0,.6); color: var(--text);
+           padding: 2px 6px; border-radius: 3px; font-size: 10px; }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<h1>DrawColor · protótipo de layout responsivo</h1>
+<p class="hint">
+  Compare as disposições em vários tamanhos. Arraste o canto inferior direito do
+  quadro, ou use os tamanhos prontos. "Comparar" mostra as três opções lado a lado
+  no tamanho atual. O selo no canto mostra o diâmetro da roda em cada caso.
+</p>
+
+<div class="toolbar" role="toolbar" aria-label="Disposição">
+  <span class="label">Disposição:</span>
+  <button type="button" data-mode="today">Hoje</button>
+  <button type="button" data-mode="side">A — Lado a lado</button>
+  <button type="button" data-mode="edges">B — Ferramentas nas bordas</button>
+  <button type="button" data-mode="auto">A automático</button>
+  <button type="button" data-mode="mixed">A + B (misto)</button>
+  <span class="sep" aria-hidden="true"></span>
+  <button type="button" id="btnCompare" aria-pressed="false">Comparar</button>
+</div>
+<div class="toolbar" role="toolbar" aria-label="Tamanho" id="sizeBar">
+  <span class="label">Tamanho:</span>
+</div>
+
+<div id="single">
+  <div class="readout" id="readout" aria-live="polite"></div>
+  <div class="dock" id="mainDock"></div>
+</div>
+<div class="compare" id="compare" hidden></div>
+
+<script src="js/layout.js"></script>
+<script>
+'use strict';
+
+const L = window.LAYOUT;
+const REF = L.REFERENCE;
+
+/* Alturas da faixa de baixo, em px (estimativa do painel real no Photoshop). */
+const LIMIT_H = 30;   // linha "Limitar cores"
+const TAB_H = 30;     // abas
+const BODY_H = 140;   // 3 sliders + linha MODE
+const SIDE_COL = 270; // largura da coluna de controles na opção A
+
+const PRESETS = [
+  { w: 380, h: 600, label: 'Padrão' },
+  { w: 530, h: 390, label: 'Largo e baixo' },
+  { w: 700, h: 430, label: 'Muito largo' },
+  { w: 900, h: 500, label: 'Bem largo' },
+  { w: 320, h: 820, label: 'Alto e estreito' },
+  { w: 280, h: 400, label: 'Mínimo' }
+];
+
+const MODES = {
+  today: { name: 'Hoje', desc: 'Roda centralizada, controles embaixo.' },
+  side:  { name: 'A — Lado a lado', desc: 'Roda à esquerda, controles à direita.' },
+  edges: { name: 'B — Ferramentas nas bordas', desc: 'Roda no centro, ferramentas nas laterais.' },
+  auto:  { name: 'A automático', desc: 'Usa a disposição que deixa a roda maior.' },
+  mixed: { name: 'A + B (misto)', desc: 'Lado a lado quando é bem largo; senão empilhado. Nos dois, ferramentas nas bordas e "Limitar" no vão ao lado da roda.' }
+};
+
+/* ---------------- geometria ---------------- */
+
+const refPoint = (id) => L.anchorToPoint(L.ANCHORS[id], REF.wheelCenter, 1);
+
+function sizeOf(id) {
+  if (id === 'hex.field') return [100, 36];
+  if (id === 'swatch.fg') return [92, 92];
+  if (id === 'swatch.bg') return [72, 72];
+  if (id === 'swatch.swap') return [26, 26];
+  return [44, 44];
+}
+
+const isLeftTool = (id) => /^(sat\.|hex\.|history\.|swatch\.)/.test(id);
+const isRightTool = (id) => /^harmony\./.test(id);
+
+function planToday(w, h) {
+  const s = L.computeScale(w, h, LIMIT_H + TAB_H + BODY_H);
+  return { kind: 'today', s, ox: L.computeOffsetX(w, s), oy: 0, limitInBottom: true };
+}
+
+function planSide(w, h) {
+  const colW = Math.min(SIDE_COL, w * 0.55);
+  const areaW = w - colW;
+  const s = Math.max(0.25, Math.min(areaW / REF.width, h / 608));
+  return {
+    kind: 'side', s, colW, areaW,
+    ox: Math.max(0, (areaW - REF.width * s) / 2),
+    oy: Math.max(0, (h - 608 * s) / 2)
+  };
+}
+
+function planEdges(w, h) {
+  // Tenta tirar o "Limitar cores" da faixa de baixo e pôr na lateral direita.
+  let s = L.computeScale(w, h, TAB_H + BODY_H);
+  let ox = L.computeOffsetX(w, s);
+  const wheelRight = ox + (REF.wheelCenter.x + REF.outerR) * s;
+  const harmonyLeft = w - (REF.width - 572 + 22) * s;
+  const cardW = 96;
+  const fits = harmonyLeft - wheelRight >= cardW + 12;
+
+  if (!fits) {
+    // Não cabe: o bloco volta para baixo, como hoje.
+    s = L.computeScale(w, h, LIMIT_H + TAB_H + BODY_H);
+    ox = L.computeOffsetX(w, s);
+  }
+  return { kind: 'edges', s, ox, oy: 0, limitInBottom: !fits, cardX: wheelRight + 6, cardW };
+}
+
+/**
+ * Mistura de A e B. A escolha entre empilhado e lado a lado é a do A
+ * automático (lado a lado só quando a roda cresce 15% ou mais). Em qualquer
+ * uma das duas, as ferramentas se espalham até as bordas da área da roda e o
+ * "Limitar cores" ocupa o vão ao lado da roda quando há espaço — a parte B.
+ */
+function planMixed(w, h) {
+  const stacked = planEdges(w, h);
+  const side = planSide(w, h);
+  if (!(side.s > stacked.s * 1.15)) return stacked;
+
+  side.spread = true;
+  const wheelRight = side.ox + (REF.wheelCenter.x + REF.outerR) * side.s;
+  const harmonyLeft = side.areaW - (REF.width - 572 + 22) * side.s;
+  side.cardW = 96;
+  side.cardInGutter = harmonyLeft - wheelRight >= side.cardW + 12;
+  side.cardX = wheelRight + 6;
+  return side;
+}
+
+function plan(mode, w, h) {
+  if (mode === 'today') return planToday(w, h);
+  if (mode === 'side') return planSide(w, h);
+  if (mode === 'edges') return planEdges(w, h);
+  if (mode === 'mixed') return planMixed(w, h);
+  // automático: lado a lado só quando ganha de verdade (15% a mais de roda)
+  const t = planToday(w, h), a = planSide(w, h);
+  return a.s > t.s * 1.15 ? a : t;
+}
+
+/* ---------------- desenho ---------------- */
+
+function box(parent, cls, css, text) {
+  const d = document.createElement('div');
+  d.className = 'p ' + (cls || '');
+  for (const k in css) d.style[k] = typeof css[k] === 'number' ? css[k] + 'px' : css[k];
+  if (text != null) d.textContent = text;
+  parent.appendChild(d);
+  return d;
+}
+
+function drawHeader(root, w, s) {
+  const hh = Math.max(22, 56 * s);
+  box(root, 'title', { left: 8, top: hh / 2 - 8, fontSize: Math.max(11, 13 * s) }, 'Color Wheel');
+  box(root, 'logo', { left: w / 2, top: hh / 2 - 8, fontSize: Math.max(10, 12 * s) }, 'XUIMART');
+  box(root, 'menu', { left: w - 22, top: hh / 2 - 9, fontSize: 14 }, '☰');
+  box(root, 'hline', { left: 0, top: hh, width: w });
+  return hh;
+}
+
+function drawCluster(root, p, w) {
+  const { s, ox, oy } = p;
+  const cx = ox + REF.wheelCenter.x * s, cy = oy + REF.wheelCenter.y * s;
+  const d = REF.outerR * 2 * s;
+  box(root, 'wheel', { left: cx, top: cy, width: d, height: d });
+
+  Object.keys(L.ANCHORS).forEach((id) => {
+    const r = refPoint(id);
+    let x = ox + r.x * s;
+    // B: ferramentas até as bordas da área da roda (o painel inteiro quando
+    // empilhado, a coluna da roda quando lado a lado).
+    const spread = p.kind === 'edges' || p.spread;
+    const right = p.kind === 'side' ? p.areaW : w;
+    if (spread && isLeftTool(id)) x = 6 + r.x * s;
+    if (spread && isRightTool(id)) x = right - 6 - (REF.width - r.x) * s;
+    const y = oy + r.y * s;
+    const [bw, bh] = sizeOf(id).map((v) => v * s);
+
+    if (id === 'swatch.fg') box(root, 'sw', { left: x, top: y, width: bw, height: bh, background: '#6a0700', zIndex: 2 });
+    else if (id === 'swatch.bg') box(root, 'sw', { left: x, top: y, width: bw, height: bh, background: '#8f8f8f', zIndex: 1 });
+    else if (id === 'hex.field') box(root, 'hex', { left: x, top: y, width: bw, height: bh, fontSize: Math.max(7, 15 * s) }, '#6A0700');
+    else box(root, 'btn', { left: x, top: y, width: bw, height: bh, zIndex: 3 });
+  });
+}
+
+function drawSliders(root, x, y, width) {
+  const grads = [
+    'linear-gradient(90deg, red, yellow, lime, cyan, blue, magenta, red)',
+    'linear-gradient(90deg, #888, #d02020)',
+    'linear-gradient(90deg, #000, #d02020)'
+  ];
+  ['H', 'S', 'V'].forEach((ch, i) => {
+    const ry = y + i * 34;
+    box(root, 'mode', { left: x, top: ry + 4, fontSize: 11 }, ch);
+    box(root, 'bar', { left: x + 16, top: ry, width: Math.max(20, width - 74), height: 24, background: grads[i] });
+    box(root, 'num', { left: x + width - 50, top: ry, width: 48, height: 24 });
+  });
+  box(root, 'mode', { left: x, top: y + 108 }, 'MODE:  RGB   HSV   LAB   CMYK   B/W');
+}
+
+function drawTabs(root, x, y, width) {
+  const names = ['Sliders', 'Mixers', 'Paletas', 'Godê'];
+  const tw = Math.min(66, (width - 8) / 4);
+  names.forEach((n, i) => box(root, 'tab' + (i === 0 ? ' on' : ''), { left: x + i * (tw + 2), top: y, width: tw, height: TAB_H - 4 }, n));
+  box(root, 'hline', { left: x, top: y + TAB_H - 4, width });
+}
+
+function drawLimitRow(root, w, y) {
+  const cw = Math.min(w - 16, 300);
+  box(root, 'card', { left: (w - cw) / 2, top: y + 3, width: cw, height: LIMIT_H - 6, borderRadius: '12px', textAlign: 'center' },
+    '☐ Limitar cores  ·  Matizes 12  ·  Tons livre');
+}
+
+function drawLimitCard(root, x, y, width) {
+  const c = box(root, 'card', { left: x, top: y, width });
+  c.innerHTML = '☐ Limitar cores<br><span class="sub">Matizes 12<br>Tons livre</span>';
+}
+
+function render(root, mode) {
+  root.innerHTML = '';
+  const w = root.clientWidth, h = root.clientHeight;
+  const p = plan(mode, w, h);
+
+  if (p.kind === 'side') {
+    drawCluster(root, p, w);
+    drawHeader(root, w, p.s);
+    const x = p.areaW + 8, cw = p.colW - 16;
+    box(root, 'vline', { left: p.areaW, top: 0, height: h });
+    const top = Math.max(26, 56 * p.s) + 8;
+    drawTabs(root, x, top, cw);
+    drawSliders(root, x, top + TAB_H + 8, cw);
+    const contentTop = top + TAB_H + 8 + 130;
+    // Com o "Limitar" no vão ao lado da roda, a coluna da direita fica toda
+    // para o conteúdo das abas.
+    const limitTop = p.cardInGutter ? h - 8 : h - 64;
+    if (limitTop - contentTop > 30) {
+      box(root, 'placeholder', { left: x, top: contentTop, width: cw, height: limitTop - contentTop - 8 },
+        'conteúdo das abas\n(Mixers, Paletas, Godê)');
+    }
+    if (p.cardInGutter) drawLimitCard(root, p.cardX, p.oy + REF.wheelCenter.y * p.s - 30, p.cardW);
+    else drawLimitCard(root, x, limitTop, cw);
+  } else {
+    drawCluster(root, p, w);
+    drawHeader(root, w, p.s);
+    const strip = (p.limitInBottom ? LIMIT_H : 0) + TAB_H + BODY_H;
+    let y = Math.max(608 * p.s, h - strip);
+    box(root, 'hline', { left: 0, top: y, width: w });
+    if (p.limitInBottom) { drawLimitRow(root, w, y); y += LIMIT_H; }
+    else {
+      const cy = REF.wheelCenter.y * p.s;
+      drawLimitCard(root, p.cardX, cy - 30, p.cardW);
+    }
+    drawTabs(root, 8, y + 2, w - 16);
+    drawSliders(root, 12, y + TAB_H + 6, w - 24);
+  }
+
+  const diameter = Math.round(REF.outerR * 2 * p.s);
+  let used = '';
+  if (mode === 'auto') used = p.kind === 'side' ? ' (lado a lado)' : ' (hoje)';
+  if (mode === 'mixed') used = p.kind === 'side' ? ' (lado a lado)' : ' (empilhado)';
+  box(root, 'badge', { zIndex: 10 }, 'roda ' + diameter + ' px' + used);
+  return diameter;
+}
+
+/* ---------------- interface ---------------- */
+
+let mode = 'today';
+const mainDock = document.getElementById('mainDock');
+const readout = document.getElementById('readout');
+const single = document.getElementById('single');
+const compare = document.getElementById('compare');
+const btnCompare = document.getElementById('btnCompare');
+const modeButtons = document.querySelectorAll('[data-mode]');
+const sizeBar = document.getElementById('sizeBar');
+const sizeButtons = [];
+
+function refreshMain() {
+  const d = render(mainDock, mode);
+  const base = Math.round(REF.outerR * 2 * planToday(mainDock.clientWidth, mainDock.clientHeight).s);
+  const ganho = base > 0 ? Math.round((d / base - 1) * 100) : 0;
+  readout.innerHTML = MODES[mode].name + ' — ' + MODES[mode].desc +
+    '  ·  Painel <b>' + mainDock.clientWidth + ' × ' + mainDock.clientHeight + '</b>' +
+    '  ·  roda <b>' + d + ' px</b>' + (mode !== 'today' ? ' (' + (ganho >= 0 ? '+' : '') + ganho + '% em relação a hoje)' : '');
+  sizeButtons.forEach((b) => b.classList.toggle('is-active',
+    +b.dataset.w === mainDock.clientWidth && +b.dataset.h === mainDock.clientHeight));
+}
+
+function refreshCompare() {
+  compare.innerHTML = '';
+  const w = mainDock.clientWidth, h = mainDock.clientHeight;
+  ['today', 'side', 'edges', 'mixed'].forEach((m) => {
+    const fig = document.createElement('figure');
+    const cap = document.createElement('figcaption');
+    const dock = document.createElement('div');
+    dock.className = 'dock';
+    dock.style.width = w + 'px';
+    dock.style.height = h + 'px';
+    fig.appendChild(cap);
+    fig.appendChild(dock);
+    compare.appendChild(fig);
+    const d = render(dock, m);
+    cap.innerHTML = '<b>' + MODES[m].name + '</b> — roda ' + d + ' px<small>' + MODES[m].desc + '</small>';
+  });
+}
+
+function setMode(m) {
+  mode = m;
+  modeButtons.forEach((b) => b.classList.toggle('is-active', b.dataset.mode === m));
+  refreshMain();
+}
+
+modeButtons.forEach((b) => b.addEventListener('click', () => {
+  if (!compare.hidden) toggleCompare(false);
+  setMode(b.dataset.mode);
+}));
+
+PRESETS.forEach((p) => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.dataset.w = p.w;
+  b.dataset.h = p.h;
+  b.textContent = p.label + ' ' + p.w + '×' + p.h;
+  b.addEventListener('click', () => {
+    mainDock.style.width = p.w + 'px';
+    mainDock.style.height = p.h + 'px';
+    if (!compare.hidden) refreshCompare();
+  });
+  sizeBar.appendChild(b);
+  sizeButtons.push(b);
+});
+
+function toggleCompare(on) {
+  compare.hidden = !on;
+  single.hidden = on;
+  btnCompare.classList.toggle('is-active', on);
+  btnCompare.setAttribute('aria-pressed', String(on));
+  if (on) refreshCompare();
+}
+btnCompare.addEventListener('click', () => toggleCompare(compare.hidden));
+
+if (typeof ResizeObserver === 'function') new ResizeObserver(refreshMain).observe(mainDock);
+setMode('mixed');
+</script>
+</body>
+</html>
