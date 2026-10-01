@@ -198,23 +198,23 @@ describe('Test 2d: CMYK fromRgb matches C.rgbToCmyk and round-trip ±1', () => {
 });
 
 /* =========================================================================
- * Test 2e: setBwSteps arredonda e limita entre 1 e 15
+ * Test 2e: setBwSteps arredonda e limita entre 2 e 15
  *
- * O contrato é simples: arredonda para inteiro e limita entre BW_MIN (1) e
- * BW_MAX (15). Qualquer valor de 1 a 15 é aceito — o artista escolhe
- * livremente quantos degraus quer na régua.
+ * O contrato é simples: arredonda para inteiro e limita entre BW_MIN (2) e
+ * BW_MAX (15). O mínimo é 2 porque a régua sempre traz os dois extremos,
+ * branco e preto.
  *
  * **Validates: Requirements 3.5**
  * ========================================================================= */
 
-describe('Test 2e: setBwSteps arredonda e limita entre 1 e 15', () => {
-  it('limita em BW_MIN (1) qualquer valor abaixo do mínimo', () => {
-    [0, -5, -100].forEach((n) => {
+describe('Test 2e: setBwSteps arredonda e limita entre 2 e 15', () => {
+  it('limita em BW_MIN (2) qualquer valor abaixo do mínimo', () => {
+    [1, 0, -5, -100].forEach((n) => {
       S.setBwSteps(n);
       assert.strictEqual(S.state.bwSteps, S.BW_MIN,
         `${n} deveria limitar em BW_MIN=${S.BW_MIN}`);
     });
-    assert.strictEqual(S.BW_MIN, 1, 'BW_MIN deve ser 1');
+    assert.strictEqual(S.BW_MIN, 2, 'BW_MIN deve ser 2');
   });
 
   it('limita em BW_MAX (15) qualquer valor acima do máximo', () => {
@@ -226,8 +226,8 @@ describe('Test 2e: setBwSteps arredonda e limita entre 1 e 15', () => {
     assert.strictEqual(S.BW_MAX, 15, 'BW_MAX deve ser 15');
   });
 
-  it('aceita sem alteração todo inteiro de 1 a 15', () => {
-    for (let n = 1; n <= 15; n++) {
+  it('aceita sem alteração todo inteiro de 2 a 15', () => {
+    for (let n = 2; n <= 15; n++) {
       S.setBwSteps(n);
       assert.strictEqual(S.state.bwSteps, n, `deveria aceitar ${n} sem mudar`);
     }
@@ -244,7 +244,7 @@ describe('Test 2e: setBwSteps arredonda e limita entre 1 e 15', () => {
     assert.strictEqual(S.state.bwSteps, 11, '10.5 deveria arredondar para 11');
   });
 
-  it('todo valor pedido resulta num inteiro entre 1 e 15', () => {
+  it('todo valor pedido resulta num inteiro entre 2 e 15', () => {
     fc.assert(
       fc.property(fc.integer({ min: -50, max: 200 }), (n) => {
         S.setBwSteps(n);

@@ -2,24 +2,28 @@
 <!--
   manifest.xml — Extensão CEP do DrawColor.
 
-  Cobre Photoshop 21+ (incluindo 26+) via runtime legado. O formato 6.0 com
+  Cobre Photoshop 2019 (20.0) até 26+ via runtime legado. O formato 6.0 com
   CSXS 8.0 e host range até 99.9 garante compatibilidade máxima — mesma
   estratégia usada por Coolorus, DrawlapsePS e PSFlow Panel.
+
+  Piso em 20.0: o Photoshop CC 2019 é a versão 20. Abaixo disso (CC 2018 = 19)
+  o CEF do CEP é mais antigo e algumas APIs usadas aqui não existem, então não
+  descemos mais.
 -->
 <ExtensionManifest Version="6.0"
                    ExtensionBundleId="com.drawcolor.colorwheel"
-                   ExtensionBundleVersion="1.0.0"
+                   ExtensionBundleVersion="1.0.2"
                    ExtensionBundleName="DrawColor Wheel">
 
   <ExtensionList>
-    <Extension Id="com.drawcolor.colorwheel.panel" Version="1.0.0" />
-    <Extension Id="com.drawcolor.colorwheel.tools" Version="1.0.0" />
+    <Extension Id="com.drawcolor.colorwheel.panel" Version="1.0.2" />
+    <Extension Id="com.drawcolor.colorwheel.tools" Version="1.0.2" />
   </ExtensionList>
 
   <ExecutionEnvironment>
     <HostList>
-      <Host Name="PHXS" Version="[21.0,99.9]" />
-      <Host Name="PHSP" Version="[21.0,99.9]" />
+      <Host Name="PHXS" Version="[20.0,99.9]" />
+      <Host Name="PHSP" Version="[20.0,99.9]" />
     </HostList>
 
     <LocaleList>

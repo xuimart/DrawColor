@@ -15,7 +15,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("DrawColor Installer")]
 [assembly: AssemblyDescription("Instalador do Plugin DrawColor para Adobe Photoshop")]
-[assembly: AssemblyVersion("1.0.1.0")]
+[assembly: AssemblyVersion("1.0.2.0")]
 
 namespace DrawColorInstaller
 {
@@ -109,7 +109,7 @@ namespace DrawColorInstaller
         public InstallerForm()
         {
             // Janela
-            this.Text            = "Instalador DrawColor v1.0.1";
+            this.Text            = "Instalador DrawColor v1.0.2";
             this.Size            = new Size(780, 540);
             this.MinimumSize     = new Size(780, 540);
             this.MaximumSize     = new Size(780, 540);
@@ -139,13 +139,18 @@ namespace DrawColorInstaller
         void ShowChangelogOnce()
         {
             string changelog =
-                "DrawColor v1.0.1 - Novidades:\n\n" +
-                "  - Roda RYB (do pintor) alem da RGB: o complementar\n" +
-                "    do vermelho passa a ser o verde\n" +
-                "  - Harmonias no estilo Coolorus: abertura por um\n" +
-                "    unico angulo, com os bracos estruturais travados\n" +
-                "  - Correcao: a base do painel nao e mais cortada\n" +
-                "    quando a janela fica compacta\n" +
+                "DrawColor v1.0.2 - Novidades:\n\n" +
+                "  - Regua B/W do branco ao preto: com 2 valores sao\n" +
+                "    os extremos, com 3 entra o cinza do meio\n" +
+                "  - Grupos de valores: divida um quadrado da regua\n" +
+                "    em varios tons com + e -, e desfaca com o reset\n" +
+                "  - Conta-gotas do Gode (Alt) mais confiavel e\n" +
+                "    aplicando a cor na hora\n" +
+                "  - Suporte ao Photoshop 2019\n\n" +
+                "Na v1.0.1:\n" +
+                "  - Roda RYB (do pintor) alem da RGB\n" +
+                "  - Harmonias no estilo Coolorus\n" +
+                "  - Base do painel nao e mais cortada\n" +
                 "  - Verificacao de atualizacao no menu\n\n" +
                 "RECURSOS:\n" +
                 "  - Roda de cores com triangulo, quadrado e disco\n" +
@@ -162,7 +167,7 @@ namespace DrawColorInstaller
                 "Apoie: https://livepix.gg/xuimart";
             MessageBox.Show(
                 changelog,
-                "Novidades do DrawColor v1.0.1",
+                "Novidades do DrawColor v1.0.2",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
             );
@@ -227,7 +232,7 @@ namespace DrawColorInstaller
 
             lblVersion = new Label
             {
-                Text      = "v1.0.1",
+                Text      = "v1.0.2",
                 Font      = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = TEXT_DIM,
                 Location  = new Point(720, 16),
@@ -694,7 +699,7 @@ namespace DrawColorInstaller
                         zipPath = tmpPath;
                         var sizeMB = new FileInfo(zipPath).Length / 1024 / 1024;
                         if (lblPlugin != null) lblPlugin.Text = "Plugin 100% embutido no EXE (" + sizeMB + " MB).";
-                        Log("Plugin carregado do instalador (v1.0.1 100% embutido).", Color.FromArgb(0,200,100));
+                        Log("Plugin carregado do instalador (v1.0.2 100% embutido).", Color.FromArgb(0,200,100));
                         UpdateButtonState();
                         return;
                     }

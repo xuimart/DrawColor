@@ -809,16 +809,71 @@ body {
   overflow: hidden;
   min-height: 30px;
 }
+/* Cada quadrado é uma célula; um quadrado agrupado guarda vários tons dentro. */
+.bw-cell {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  border-right: 1px solid rgba(0,0,0,.25);
+}
+.bw-cell:last-child { border-right: none; }
+.bw-cell.is-selected::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; right: 0; bottom: 0;
+  box-shadow: inset 0 0 0 2px var(--accent);
+  pointer-events: none;
+}
 .bw-ramp button {
   flex: 1;
+  min-width: 0;
   border: none;
-  border-right: 1px solid rgba(0,0,0,.25);
   padding: 0;
   cursor: pointer;
 }
-.bw-ramp button:last-child { border-right: none; }
+/* Fio discreto entre os tons de um grupo, mais fraco que o das células. */
+.bw-cell button + button { border-left: 1px solid rgba(0,0,0,.14); }
 .bw-ramp button.is-current { box-shadow: inset 0 0 0 2px var(--accent); }
+/* Dentro de um grupo já selecionado a borda da célula é a vermelha; o tom em
+   uso ganha só um contorno claro, para as duas marcas não se confundirem. */
+.bw-cell.is-selected.is-grouped button.is-current { box-shadow: inset 0 0 0 1px rgba(255,255,255,.9); }
 .bw-ramp button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+/* Controles do grupo: embaixo do quadrado selecionado, com o reset alinhado
+   à coluna dos botões − e + da régua. */
+.bw-group-row { display: flex; align-items: center; gap: 6px; margin-top: 3px; height: 18px; }
+.bw-group-track { position: relative; flex: 1; height: 100%; }
+.bw-group-ctl {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+.bw-group-ctl[hidden] { display: none; }
+.bw-group-ctl b { font-size: 11px; color: var(--text); min-width: 10px; text-align: right; }
+.bw-group-ctl button,
+.bw-group-reset {
+  height: 16px;
+  padding: 0 6px;
+  background: var(--bg-raised);
+  border: 1px solid var(--divider);
+  border-radius: 2px;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+.bw-group-reset { width: 28px; padding: 0; flex: none; }
+.bw-group-ctl button:hover:not(:disabled),
+.bw-group-reset:hover:not(:disabled) { background: var(--bg-raised-hi); }
+.bw-group-ctl button:disabled,
+.bw-group-reset:disabled { opacity: .35; cursor: default; }
+.bw-group-ctl button:focus-visible,
+.bw-group-reset:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
 .bw-stepper { display: flex; flex-direction: column; gap: 2px; }
 .bw-stepper button {
@@ -1867,7 +1922,8 @@ body {
   --pane-pad-y: max(6px, calc(8 * var(--u)));
   --slider-gap: max(5px, calc(10 * var(--u)));
   --mode-gap:   max(6px, calc(8 * var(--u)));
-  --bw-h:       max(58px, calc(64 * var(--u)));
+  /* Régua + linha dos controles de grupo + contagem. */
+  --bw-h:       max(80px, calc(88 * var(--u)));
 
   /**
    * Altura do corpo da aba. NÃO é um número escolhido a olho: é a soma exata

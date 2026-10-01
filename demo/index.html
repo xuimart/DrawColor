@@ -318,7 +318,19 @@
               <button type="button" id="bwPlus" aria-label="Mais valores">+</button>
             </div>
           </div>
-          <span class="bw-count"><b id="bwCount">7</b> valores</span>
+          <!-- Grupo do quadrado selecionado: os controles ficam embaixo dele -->
+          <div class="bw-group-row">
+            <div class="bw-group-track" id="bwGroupTrack">
+              <div class="bw-group-ctl" id="bwGroupCtl" hidden>
+                <b id="bwGroupCount">1</b>
+                <button type="button" id="bwGroupPlus" aria-label="Dividir o quadrado em mais tons">+</button>
+                <button type="button" id="bwGroupMinus" aria-label="Dividir o quadrado em menos tons">−</button>
+              </div>
+            </div>
+            <button type="button" class="bw-group-reset" id="bwGroupReset"
+                    title="Desfazer todos os grupos" aria-label="Desfazer todos os grupos">↺</button>
+          </div>
+          <span class="bw-count"><b id="bwCount">11</b> valores</span>
         </div>
 
         <div class="mode-row">

@@ -6,7 +6,7 @@
   'use strict';
 
   /** Versão local do plugin — atualizada a cada release. */
-  const DRAWCOLOR_VERSION = '1.0.1';
+  const DRAWCOLOR_VERSION = '1.0.2';
 
   /**
    * De onde vem o aviso de atualização. É um version.json no servidor da

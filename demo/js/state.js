@@ -209,11 +209,14 @@ window.AppState = (function () {
   const HUE_STEP_OPTIONS = [6, 8, 12, 16, 24, 36];
 
   /**
-   * Quantidades de AMOSTRAS permitidas na régua B/W: de 1 a 15.
-   * O artista escolhe livremente quantos degraus quer na régua. Os botões
-   * − e + andam de 1 em 1 por esta lista.
+   * Quantidades de AMOSTRAS permitidas na régua B/W: de 2 a 15.
+   * A régua sempre vai do branco ao preto, então o mínimo é 2 — os dois
+   * extremos. Os botões − e + andam de 1 em 1 por esta lista.
    */
-  const BW_STEP_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+  const BW_STEP_OPTIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+
+  /** Teto de subdivisões de um grupo dentro de um quadrado da régua. */
+  const BW_GROUP_MAX = 8;
 
   // Derivados da lista, mantidos exportados por compatibilidade.
   const BW_MIN = BW_STEP_OPTIONS[0];
@@ -293,9 +296,16 @@ window.AppState = (function () {
     },
     // Limitação de cor: discretiza matiz e/ou saturação e valor
     limit: { enabled: false, hueSteps: 12, svSteps: 0 },  // svSteps 0 = contínuo
-    // Rampa de tons de cinza do modo B/W. 10 amostras = passo 10:
-    // 100, 90, 80 ... 10. O preto puro fica fora da régua.
-    bwSteps: 10,
+    // Rampa de tons de cinza do modo B/W, do branco ao preto. 11 amostras dá
+    // passo 10: 100, 90, 80 ... 10, 0.
+    bwSteps: 11,
+    /**
+     * Grupos de valores: índice do quadrado da régua → quantas subdivisões
+     * ele tem. Um quadrado sem entrada é um tom único. Os índices só fazem
+     * sentido para a contagem atual da régua, por isso mudar a contagem
+     * descarta os grupos.
+     */
+    bwGroups: {},
     // Conferência de valores: exibe todo o picker em cinza perceptual
     // sem alterar a cor real selecionada
     valueCheck: false,
@@ -394,29 +404,118 @@ window.AppState = (function () {
 
   /**
    * Define a quantidade de amostras da régua B/W.
-   * Arredonda e limita entre BW_MIN (1) e BW_MAX (15).
+   * Arredonda e limita entre BW_MIN (2) e BW_MAX (15).
+   *
+   * Mudar a contagem descarta os grupos: eles são guardados por índice de
+   * quadrado, e com outra contagem o índice 3 já é outro tom.
    */
   function setBwSteps(n) {
-    state.bwSteps = C.clamp(Math.round(Number(n)), BW_MIN, BW_MAX);
+    const next = C.clamp(Math.round(Number(n)), BW_MIN, BW_MAX);
+    if (next !== state.bwSteps) state.bwGroups = {};
+    state.bwSteps = next;
     emit('bw');
   }
 
-  // Tons de cinza da rampa B/W, do claro para o escuro.
-  // `bwSteps` é a QUANTIDADE DE AMOSTRAS (N): a rampa devolve N elementos, com
-  // passo 100/N, indo de 100 (branco puro) até Math.round(100/N).
-  // O preto puro NÃO faz parte da régua: quem quer preto digita 0 no campo K.
-  // Os degraus são espaçados na mesma escala que o canal K usa — porcentagem
-  // de cinza em 8 bits — e não em L perceptual. É isso que faz o valor exibido
-  // no campo K coincidir exatamente com o nível do degrau selecionado.
-  function getBwRamp() {
+  /**
+   * Um tom de cinza na escala do canal K: porcentagem inteira de cinza 8-bit.
+   *
+   * O `|| 0` não é enfeite: o último degrau é 100 − (N−1)·100/(N−1), que em
+   * ponto flutuante dá algo como −1,4e−14 para alguns N, e Math.round disso é
+   * −0. Visualmente é preto, mas −0 vira "−0%" em texto e falha comparação
+   * estrita com 0.
+   */
+  function grayTone(level) {
+    const lv = Math.min(100, Math.max(0, Math.round(level))) || 0;
+    const g = Math.round(lv / 100 * 255);
+    return { level: lv, r: g, g: g, b: g };
+  }
+
+  /** Níveis dos quadrados da régua, do branco ao preto, sem arredondar. */
+  function bwLevels() {
+    const n = state.bwSteps;
     const out = [];
-    const n = state.bwSteps; // N = quantidade de amostras exibidas na régua
-    for (let i = 0; i < n; i++) {
-      const level = Math.round(100 - i * (100 / n));
-      const g = Math.round(level / 100 * 255);
-      out.push({ level, r: g, g: g, b: g });
-    }
+    for (let i = 0; i < n; i++) out.push(100 - i * (100 / (n - 1)));
     return out;
+  }
+
+  /**
+   * Faixa de valor que um quadrado ocupa: da metade do caminho até o vizinho
+   * mais claro à metade do caminho até o mais escuro. Nos extremos a faixa
+   * para no próprio branco ou preto. Devolve { hi, lo } com hi > lo.
+   */
+  function bwCellBand(index) {
+    const lv = bwLevels();
+    const v = lv[index];
+    const hi = index === 0 ? v : (lv[index - 1] + v) / 2;
+    const lo = index === lv.length - 1 ? v : (v + lv[index + 1]) / 2;
+    return { hi, lo };
+  }
+
+  /**
+   * Quantas subdivisões cabem num quadrado sem dois tons caírem no mesmo
+   * nível inteiro do canal K. Com a régua cheia a faixa de um extremo mede
+   * pouco mais de 3 níveis, e dividir mais que isso repetiria tons.
+   */
+  function bwGroupMax(index) {
+    if (!(index >= 0 && index < state.bwSteps)) return 1;
+    const band = bwCellBand(index);
+    return Math.max(1, Math.min(BW_GROUP_MAX, Math.floor(band.hi - band.lo)));
+  }
+
+  /** Subdivisões atuais de um quadrado. 1 = tom único, sem grupo. */
+  function getBwGroup(index) {
+    return state.bwGroups[index] || 1;
+  }
+
+  /**
+   * Define em quantos tons um quadrado se divide. 1 (ou menos) desfaz o grupo.
+   * O teto é o de bwGroupMax, para os tons nunca se repetirem.
+   */
+  function setBwGroup(index, k) {
+    if (!(index >= 0 && index < state.bwSteps) || !isNum(k)) return;
+    const n = C.clamp(Math.round(k), 1, bwGroupMax(index));
+    if (n <= 1) delete state.bwGroups[index];
+    else state.bwGroups[index] = n;
+    emit('bw');
+  }
+
+  function resetBwGroups() {
+    state.bwGroups = {};
+    emit('bw');
+  }
+
+  function hasBwGroups() {
+    return Object.keys(state.bwGroups).length > 0;
+  }
+
+  /**
+   * Tons de cinza da rampa B/W, do branco ao preto.
+   *
+   * `bwSteps` é a QUANTIDADE DE AMOSTRAS (N), e as duas pontas são sempre os
+   * extremos: com 2 a régua é branco e preto, com 3 entra o cinza do meio, e
+   * assim por diante, em passos iguais de 100/(N−1).
+   *
+   * Os degraus são espaçados na mesma escala que o canal K usa — porcentagem
+   * de cinza em 8 bits — e não em L perceptual. É isso que faz o valor exibido
+   * no campo K coincidir exatamente com o nível do degrau selecionado.
+   *
+   * Um quadrado com grupo traz `subs`: os tons em que ele se divide, do claro
+   * para o escuro, cada um no centro de uma fatia igual da faixa do quadrado.
+   */
+  function getBwRamp() {
+    return bwLevels().map((raw, i) => {
+      const tone = grayTone(Math.round(raw));
+      const k = getBwGroup(i);
+      if (k > 1) {
+        const band = bwCellBand(i);
+        const slice = (band.hi - band.lo) / k;
+        tone.subs = [];
+        for (let j = 0; j < k; j++) {
+          tone.subs.push(grayTone(Math.round(band.hi - (j + 0.5) * slice)));
+        }
+      }
+      return tone;
+    });
   }
 
   /* ---------------- Acesso à cor ---------------- */
@@ -1502,6 +1601,7 @@ window.AppState = (function () {
     setSliderMode, setTempOffset, swapForeground,
     quantizeHue, quantizeLevel, applyLimit, setLimit, getLimitedPalette,
     setBwSteps, getBwRamp,
+    BW_GROUP_MAX, getBwGroup, setBwGroup, bwGroupMax, resetBwGroups, hasBwGroups,
     setValueCheck, display, displayCss,
     SHAPES, setWheelRotation, nudgeWheelRotation, resetWheelRotation, setShape,
     WHEEL_SPACES, setWheelSpace, hueToAngle, angleToHue,

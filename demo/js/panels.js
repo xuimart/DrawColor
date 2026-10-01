@@ -376,12 +376,36 @@ window.Panels = (function () {
 
   /* ================= Rampa de valores B/W ================= */
 
+  /**
+   * Quadrado da régua escolhido para agrupar. É estado de interface, não de
+   * cor: fica aqui e não no AppState. Guarda também a contagem da régua em que
+   * foi escolhido, porque com outra contagem o mesmo índice é outro tom.
+   */
+  let bwSelected = null;
+  let bwSelectedSteps = null;
+
+  function selectBwCell(index) {
+    bwSelected = index;
+    bwSelectedSteps = S.state.bwSteps;
+  }
+
   function initBwRamp() {
     document.getElementById('bwMinus').addEventListener('click', () => {
       S.setBwSteps(S.state.bwSteps - 1);
     });
     document.getElementById('bwPlus').addEventListener('click', () => {
       S.setBwSteps(S.state.bwSteps + 1);
+    });
+    document.getElementById('bwGroupPlus').addEventListener('click', () => {
+      if (bwSelected === null) return;
+      S.setBwGroup(bwSelected, S.getBwGroup(bwSelected) + 1);
+    });
+    document.getElementById('bwGroupMinus').addEventListener('click', () => {
+      if (bwSelected === null) return;
+      S.setBwGroup(bwSelected, S.getBwGroup(bwSelected) - 1);
+    });
+    document.getElementById('bwGroupReset').addEventListener('click', () => {
+      S.resetBwGroups();
     });
   }
 
@@ -391,6 +415,9 @@ window.Panels = (function () {
     block.hidden = !isBw;
     if (!isBw) return;
 
+    // A seleção não sobrevive a uma troca de contagem: o índice mudou de tom.
+    if (bwSelectedSteps !== S.state.bwSteps) bwSelected = null;
+
     const ramp = S.getBwRamp();
     const host = document.getElementById('bwRamp');
     const cur = S.getRgb();
@@ -398,31 +425,94 @@ window.Panels = (function () {
       ? Math.round(cur.r / 255 * 100)
       : Math.round(C.labToRgb(C.rgbToLab(cur.r, cur.g, cur.b).L, 0, 0).r / 255 * 100);
 
-    host.innerHTML = '';
-    // O degrau mais próximo da luminosidade atual recebe destaque
-    let closest = 0, closestDist = Infinity;
+    /**
+     * Todos os tons clicáveis em sequência — os quadrados simples e os tons de
+     * cada grupo — para achar qual deles corresponde à cor atual.
+     */
+    const flat = [];
     ramp.forEach((tone, i) => {
-      const d = Math.abs(tone.level - currentLevel);
-      if (d < closestDist) { closestDist = d; closest = i; }
+      (tone.subs || [tone]).forEach((t) => flat.push({ tone: t, cell: i }));
     });
 
+    let closest = -1, closestDist = Infinity;
+    flat.forEach((entry, j) => {
+      const d = Math.abs(entry.tone.level - currentLevel);
+      if (d < closestDist) { closestDist = d; closest = j; }
+    });
+    // Tolerância de meio intervalo até o tom vizinho, para uma cor que não
+    // está na régua não acender um quadrado qualquer.
+    if (closest >= 0) {
+      const lv = flat[closest].tone.level;
+      const gaps = [flat[closest - 1], flat[closest + 1]]
+        .filter(Boolean)
+        .map((e) => Math.abs(e.tone.level - lv));
+      const half = gaps.length ? Math.min(...gaps) / 2 : 50;
+      if (closestDist >= Math.max(half, 0.5)) closest = -1;
+    }
+
+    host.innerHTML = '';
+    let j = 0;
     ramp.forEach((tone, i) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.style.background = `rgb(${tone.r},${tone.g},${tone.b})`;
-      btn.title = `Valor ${Math.round(tone.level)}%`;
-      btn.setAttribute('aria-label', `Aplicar valor ${Math.round(tone.level)}%`);
-      // Meio-passo: com N amostras o passo é 100/N, então a tolerância é 50/N.
-      if (i === closest && closestDist < 50 / ramp.length) btn.classList.add('is-current');
-      btn.addEventListener('click', () => {
-        S.setRgb(tone.r, tone.g, tone.b, { commit: true, relock: true });
+      const cell = document.createElement('div');
+      cell.className = 'bw-cell' + (i === bwSelected ? ' is-selected' : '');
+      if (tone.subs) cell.classList.add('is-grouped');
+
+      (tone.subs || [tone]).forEach((t) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.style.background = `rgb(${t.r},${t.g},${t.b})`;
+        btn.title = `Valor ${t.level}%`;
+        btn.setAttribute('aria-label', `Aplicar valor ${t.level}%`);
+        if (j === closest) btn.classList.add('is-current');
+        btn.addEventListener('click', () => {
+          selectBwCell(i);
+          S.setRgb(t.r, t.g, t.b, { commit: true, relock: true });
+          // Se a cor já era esta, setRgb não avisa ninguém; a seleção mudou mesmo assim.
+          refreshBwRamp();
+        });
+        cell.appendChild(btn);
+        j++;
       });
-      host.appendChild(btn);
+
+      host.appendChild(cell);
     });
 
     document.getElementById('bwCount').textContent = ramp.length;
     document.getElementById('bwMinus').disabled = S.state.bwSteps <= S.BW_MIN;
     document.getElementById('bwPlus').disabled = S.state.bwSteps >= S.BW_MAX;
+
+    refreshBwGroupControls(ramp.length);
+  }
+
+  /**
+   * Controles de grupo embaixo do quadrado selecionado.
+   *
+   * A posição é calculada em px, e não com `transform: translateX(-50%)`: o
+   * UXP não aplica transform de forma confiável (ver styles-uxp.css), e aqui
+   * a conta é simples — centro do quadrado menos metade da largura do
+   * controle, preso às bordas da trilha para não sair da régua nos extremos.
+   */
+  function refreshBwGroupControls(count) {
+    const ctl = document.getElementById('bwGroupCtl');
+    const track = document.getElementById('bwGroupTrack');
+    document.getElementById('bwGroupReset').disabled = !S.hasBwGroups();
+
+    if (bwSelected === null || bwSelected >= count) {
+      ctl.hidden = true;
+      return;
+    }
+
+    const k = S.getBwGroup(bwSelected);
+    document.getElementById('bwGroupCount').textContent = k;
+    document.getElementById('bwGroupPlus').disabled = k >= S.bwGroupMax(bwSelected);
+    document.getElementById('bwGroupMinus').disabled = k <= 1;
+
+    ctl.hidden = false;
+    const trackW = track.clientWidth;
+    const ctlW = ctl.offsetWidth;
+    const center = trackW * (bwSelected + 0.5) / count;
+    const left = Math.max(0, Math.min(trackW - ctlW, center - ctlW / 2));
+    ctl.style.left = left + 'px';
   }
 
   /* ================= Limitação de cor ================= */

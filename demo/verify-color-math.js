@@ -244,43 +244,39 @@ pal.forEach((h) => {
 St.setLimit({ enabled: false, svSteps: 0 });
 if (St.getLimitedPalette() !== null) lfail('sem limite, getLimitedPalette deveria retornar null');
 
-// Rampa B/W: N é a QUANTIDADE DE AMOSTRAS, então a régua tem N tons, do
-// branco puro (nível 100) até o nível 100/N, sem repetição. O preto puro não
-// faz parte da régua — quem quer preto digita 0 no campo K. N é sempre
-// divisor de 100, logo o passo é inteiro e todo nível é múltiplo exato dele.
+// Rampa B/W: N é a QUANTIDADE DE AMOSTRAS, e as pontas são sempre os
+// extremos — branco puro (100) e preto puro (0). Com 2 é só branco e preto,
+// com 3 entra o cinza do meio. O passo é 100/(N−1), arredondado para o
+// inteiro do canal K.
 St.BW_STEP_OPTIONS.forEach((n) => {
   St.setBwSteps(n);
-  if (St.state.bwSteps !== n) lfail(`setBwSteps(${n}) deveria aceitar o divisor`);
+  if (St.state.bwSteps !== n) lfail(`setBwSteps(${n}) deveria aceitar ${n}`);
 
   const ramp = St.getBwRamp();
-  const passo = 100 / n;
+  const passo = 100 / (n - 1);
 
   if (ramp.length !== n) lfail(`rampa de ${n} amostras deveria ter ${n} tons, tem ${ramp.length}`);
   if (ramp[0].r !== 255) lfail(`rampa de ${n} deveria começar no branco`);
-
-  // A última amostra é o menor degrau da régua, o nível 100/N
-  const ultimoTom = Math.round(passo / 100 * 255);
-  if (ramp[n - 1].r !== ultimoTom) {
-    lfail(`rampa de ${n} deveria terminar em ${ultimoTom} (nível ${passo}), veio ${ramp[n - 1].r}`);
-  }
+  if (ramp[n - 1].r !== 0) lfail(`rampa de ${n} deveria terminar no preto, veio ${ramp[n - 1].r}`);
 
   for (let i = 1; i < n; i++) {
     if (ramp[i].r >= ramp[i - 1].r) lfail(`rampa de ${n} não é monotônica em ${i}`);
   }
   ramp.forEach((t, i) => {
     if (t.r !== t.g || t.g !== t.b) lfail('tom da rampa não é neutro');
-    if (t.level !== 100 - i * passo) lfail(`nível ${t.level} deveria ser ${100 - i * passo}`);
+    const esperado = Math.round(100 - i * passo) || 0;
+    if (t.level !== esperado) lfail(`nível ${t.level} deveria ser ${esperado}`);
   });
 });
 
-// Contagem da régua: encaixe nos divisores de 100
+// Contagem da régua: limitada a [BW_MIN, BW_MAX], inteira
 St.setBwSteps(1);
 if (St.state.bwSteps !== St.BW_MIN) lfail('bwSteps deveria encaixar no mínimo');
 St.setBwSteps(999);
 if (St.state.bwSteps !== St.BW_MAX) lfail('bwSteps deveria encaixar no máximo');
 St.setBwSteps(9);
-if (St.state.bwSteps !== 10) lfail('9 deveria encaixar em 10, o divisor mais próximo');
-St.setBwSteps(10);
+if (St.state.bwSteps !== 9) lfail('9 deveria ser aceito como está');
+St.setBwSteps(11);
 
 // Histórico não deve guardar duplicata consecutiva
 St.setHsv({ h: 10, s: 50, v: 50 }, { commit: true });
@@ -983,11 +979,14 @@ for (let i = 0; i < 2000; i++) {
   if (got <= -180 - 1e-9 || got > 180 + 1e-9) hfail(`offset ${got} fora de (-180,180]`);
 }
 
-// Editar um braço afeta só aquele braço
-St.setHarmonyOffset(0, 100);
+// No acentuado um braço de abertura ajusta φ: o espelho acompanha e o
+// complementar fica em 180. Não existe mais ajuste de um braço sozinho — era
+// o que permitia desmanchar o acento.
+St.setHarmonyOffset(0, 70);
 const edited = St.getHarmonyOffsets();
-if (Math.abs(edited[0] - 100) > 1e-9) hfail(`braço 0 deveria virar 100, virou ${edited[0]}`);
-if (Math.abs(edited[1] - canonical[1]) > 1e-9) hfail('braço 1 não deveria ter mudado');
+if (Math.abs(edited[0] - 70) > 1e-9) hfail(`braço 0 deveria virar 70, virou ${edited[0]}`);
+if (Math.abs(edited[1] + 70) > 1e-9) hfail(`o espelho deveria ir para -70, foi ${edited[1]}`);
+if (edited[2] !== 180) hfail('o complementar do acentuado saiu dos 180°');
 if (!St.isHarmonyEdited()) hfail('esquema deveria contar como editado');
 
 // Índice inválido é ignorado
@@ -1001,11 +1000,11 @@ if (JSON.stringify(St.getHarmonyOffsets()) !== offsetsBefore) {
 // Os matizes secundários seguem o offset editado e o matiz principal
 St.setHsv({ h: 30, s: 60, v: 60 });
 let hues = St.getHarmonyHues();
-if (Math.abs(hues[0] - 130) > 1e-6) hfail(`matiz secundário deveria ser 130, deu ${hues[0].toFixed(2)}`);
+if (Math.abs(hues[0] - 100) > 1e-6) hfail(`matiz secundário deveria ser 100, deu ${hues[0].toFixed(2)}`);
 
 St.setHsv({ h: 300, s: 60, v: 60 });
 hues = St.getHarmonyHues();
-if (Math.abs(hues[0] - 40) > 1e-6) hfail(`matiz deveria dar a volta para 40, deu ${hues[0].toFixed(2)}`);
+if (Math.abs(hues[0] - 10) > 1e-6) hfail(`matiz deveria dar a volta para 10, deu ${hues[0].toFixed(2)}`);
 
 // A edição é por esquema: trocar e voltar preserva o ajuste
 St.setScheme('triad');
@@ -1015,7 +1014,7 @@ if (JSON.stringify(St.getHarmonyOffsets()) !== JSON.stringify(St.getScheme().off
 }
 St.setScheme('accent');
 if (!St.isHarmonyEdited()) hfail('a edição do acentuado deveria ter sido preservada');
-if (Math.abs(St.getHarmonyOffsets()[0] - 100) > 1e-9) hfail('offset editado do acentuado se perdeu');
+if (Math.abs(St.getHarmonyOffsets()[0] - 70) > 1e-9) hfail('offset editado do acentuado se perdeu');
 
 // Restaurar volta aos canônicos e só do esquema ativo
 St.setScheme('triad');
