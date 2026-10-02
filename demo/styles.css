@@ -2585,72 +2585,12 @@ body {
   white-space: nowrap;
 }
 
-/* ==================================================================== */
-/* COMPATIBILIDADE COM CEF ANTIGO (Photoshop 2019–2021 / CEP 9–11)       */
-/*                                                                      */
-/* Versões antigas do CEF (Chromium < 84) ignoram `gap` em flexbox, e o */
-/* painel aparecia com as abas e botões grudados, sem espaçamento. Aqui */
-/* repomos o espaçamento com `margin` nos filhos — margens funcionam em  */
-/* qualquer CEF. Em engines modernas o `gap` e a margem convivem sem     */
-/* dobrar o espaço, porque a margem é aplicada só ao lado interno e os   */
-/* valores são os mesmos; o efeito visual é idêntico.                   */
-/*                                                                      */
-/* `inset` (Chromium 87+) e `:has()` (105+) foram substituídos no CSS    */
-/* por forma longa (top/right/bottom/left) e por classes em JS.          */
-/*                                                                      */
-/* Estratégia: estas regras ZERAM o `gap` das linhas flex do painel e    */
-/* repõem o espaçamento com `margin` nos filhos. Margem funciona em       */
-/* qualquer CEF, e como o `gap` fica zerado aqui, não há risco de dobrar  */
-/* o espaço nas engines que suportam as duas coisas. Os valores de margem */
-/* repetem os de `gap` das regras acima, então o visual não muda no       */
-/* Chromium moderno.                                                     */
-/* ==================================================================== */
+/* Compatibilidade com o CEF antigo do Photoshop 22 (Chromium 74: sem max()
+   e sem gap em flexbox) fica em js/css-compat.js, que só age nesses motores.
+   Nada aqui precisa de regra paralela para eles: aqui vale o CSS moderno.
 
-/* As margens repõem o espaçamento entre irmãos. O gap das linhas flex é
-   zerado logo abaixo, com um seletor de especificidade maior, sem recriar os
-   seletores-âncora que os testes conferem. Com o gap zerado, a margem não
-   soma duas vezes em engine nenhuma. */
-.panel .tabs > * + * { margin-left: max(4px, calc(7 * var(--u))); }
-.panel .mode-row > * + * { margin-left: max(5px, calc(8 * var(--u))); }
-.panel .mode-btns > * + * { margin-left: max(2px, calc(4 * var(--u))); }
-.panel .mode-toggles > * + * { margin-left: max(4px, calc(6 * var(--u))); }
-.panel .popout-menu > * + * { margin-top: calc(3 * var(--u)); }
-.panel .mix-strip-head > * + * { margin-left: 6px; }
-.panel .mix-strip-toggles > * + * { margin-left: 5px; }
-.panel .mix-strip-actions > * + * { margin-left: 4px; }
-.panel .palette-head > * + * { margin-left: 4px; }
-.panel .palette-actions > * + * { margin-left: 4px; }
-.panel .gode-tools > * + * { margin-left: 3px; }
-.panel .gode-actions > * + * { margin-left: 4px; }
-.panel .gode-sliders > * + * { margin-top: 4px; }
-.panel .limit-panel-rows > * + * { margin-left: calc(12 * var(--u)); }
-.panel .limit-panel-head > * + * { margin-left: calc(6 * var(--u)); }
-.panel .bw-row > * + * { margin-left: 6px; }
-.panel .bw-stepper > * + * { margin-top: 2px; }
-.panel .bw-group-row > * + * { margin-left: 6px; }
-.panel .dial-wrap > * + * { margin-top: 1px; }
-.panel .menu-row > * + * { margin-left: 5px; }
-
-/* Zera o gap das linhas flex do painel. O prefixo extra `.panel.panel` tem
-   especificidade maior que `.panel`, então vence a declaração de gap original.
-   Agrupar os seletores aqui evita recriar as regras-âncora individuais. */
-.panel.panel .tabs,
-.panel.panel .mode-row,
-.panel.panel .mode-btns,
-.panel.panel .mode-toggles,
-.panel.panel .popout-menu,
-.panel.panel .mix-strip-head,
-.panel.panel .mix-strip-toggles,
-.panel.panel .mix-strip-actions,
-.panel.panel .palette-head,
-.panel.panel .palette-actions,
-.panel.panel .gode-tools,
-.panel.panel .gode-actions,
-.panel.panel .gode-sliders,
-.panel.panel .limit-panel-rows,
-.panel.panel .limit-panel-head,
-.panel.panel .bw-row,
-.panel.panel .bw-stepper,
-.panel.panel .bw-group-row,
-.panel.panel .dial-wrap,
-.panel.panel .menu-row { gap: 0; }
+   Havia neste ponto um bloco que zerava o gap das linhas flex e repunha o
+   espaço com `> * + * { margin-left }`. Além de não resolver o CEF antigo
+   (as margens usavam max(), que ele também não entende), ele vencia o
+   `margin-left: auto` do ⤢ das abas e dos botões ☀/◐ da linha MODE, que
+   deixavam de ir para a direita em todos os motores. */

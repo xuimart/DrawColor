@@ -24,6 +24,9 @@ const DIST = path.join(ROOT, 'dist');
 const CORE_SCRIPTS = [
   'i18n.js',
   'platform.js',
+  // Logo depois do platform.js (precisa saber se é UXP) e antes de qualquer
+  // medida de layout: traduz o max() do CSS para o CEF antigo (Chromium 74).
+  'css-compat.js',
   'fingerprint.js',
   'overlay.js',
   'oauth-server.js',

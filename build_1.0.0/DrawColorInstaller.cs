@@ -15,7 +15,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("DrawColor Installer")]
 [assembly: AssemblyDescription("Instalador do Plugin DrawColor para Adobe Photoshop")]
-[assembly: AssemblyVersion("1.0.5.0")]
+[assembly: AssemblyVersion("1.0.6.0")]
 
 namespace DrawColorInstaller
 {
@@ -109,7 +109,7 @@ namespace DrawColorInstaller
         public InstallerForm()
         {
             // Janela
-            this.Text            = "Instalador DrawColor v1.0.5";
+            this.Text            = "Instalador DrawColor v1.0.6";
             this.Size            = new Size(780, 540);
             this.MinimumSize     = new Size(780, 540);
             this.MaximumSize     = new Size(780, 540);
@@ -139,10 +139,13 @@ namespace DrawColorInstaller
         void ShowChangelogOnce()
         {
             string changelog =
-                "DrawColor v1.0.5 - Novidades:\n\n" +
-                "  - Correcao: o painel agora carrega mesmo em\n" +
-                "    versoes antigas do Photoshop, sem ficar com\n" +
-                "    os controles amontoados em tamanho gigante\n" +
+                "DrawColor v1.0.6 - Novidades:\n\n" +
+                "  - Correcao: no Photoshop 2021 (22.x) e anteriores\n" +
+                "    o painel aparecia amontoado no topo, com abas,\n" +
+                "    sliders e botoes grudados. Agora o layout fica\n" +
+                "    igual ao das versoes novas do Photoshop\n" +
+                "  - Botao Diagnostico no instalador, para o suporte\n\n" +
+                "Na v1.0.5:\n" +
                 "  - Idioma Portugues / Ingles no menu de opcoes\n\n" +
                 "Na v1.0.3:\n" +
                 "  - Layout responsivo: em painel largo a roda fica\n" +
@@ -179,7 +182,7 @@ namespace DrawColorInstaller
                 "Apoie: https://livepix.gg/xuimart";
             MessageBox.Show(
                 changelog,
-                "Novidades do DrawColor v1.0.5",
+                "Novidades do DrawColor v1.0.6",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
             );
@@ -244,7 +247,7 @@ namespace DrawColorInstaller
 
             lblVersion = new Label
             {
-                Text      = "v1.0.5",
+                Text      = "v1.0.6",
                 Font      = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = TEXT_DIM,
                 Location  = new Point(720, 16),
@@ -717,7 +720,7 @@ namespace DrawColorInstaller
                         zipPath = tmpPath;
                         var sizeMB = new FileInfo(zipPath).Length / 1024 / 1024;
                         if (lblPlugin != null) lblPlugin.Text = "Plugin 100% embutido no EXE (" + sizeMB + " MB).";
-                        Log("Plugin carregado do instalador (v1.0.5 100% embutido).", Color.FromArgb(0,200,100));
+                        Log("Plugin carregado do instalador (v1.0.6 100% embutido).", Color.FromArgb(0,200,100));
                         UpdateButtonState();
                         return;
                     }
@@ -1176,7 +1179,7 @@ namespace DrawColorInstaller
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine("==== DrawColor - Diagnostico do Sistema ====");
                 sb.AppendLine("Gerado em: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-                sb.AppendLine("Instalador: v1.0.5");
+                sb.AppendLine("Instalador: v1.0.6");
                 sb.AppendLine();
 
                 sb.AppendLine("---- Windows ----");

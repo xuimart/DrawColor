@@ -527,6 +527,17 @@ window.LAYOUT = (function () {
     }
   }
 
+  /**
+   * Escreve a escala no painel. No CEF antigo do Photoshop 22 (Chromium 74,
+   * sem max() no CSS) css-compat.js recalcula na hora os pisos em px que o
+   * max() faria, para a medição logo a seguir já ver os valores certos. Nos
+   * outros motores CssCompat.sync() não faz nada.
+   */
+  function writeScale(el, s) {
+    el.style.setProperty('--scale', String(s));
+    if (window.CssCompat) window.CssCompat.sync();
+  }
+
   function applyLayout() {
     const el = panel();
     if (!el) return;
@@ -563,7 +574,7 @@ window.LAYOUT = (function () {
       currentOffsetX = plan.ox;
       currentOffsetY = plan.oy;
       // A escala entra antes da medição do cartão em applyPlanToDom.
-      el.style.setProperty('--scale', String(currentScale));
+      writeScale(el, currentScale);
       applyPlanToDom(el, plan);
       ctx = { spread: plan.spread, right: plan.right, clamp: !editing };
 
@@ -575,7 +586,7 @@ window.LAYOUT = (function () {
       }
     }
 
-    el.style.setProperty('--scale', String(currentScale));
+    writeScale(el, currentScale);
     el.style.setProperty('--ox', currentOffsetX.toFixed(2) + 'px');
 
     const center = centerPx();

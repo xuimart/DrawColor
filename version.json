@@ -1,5 +1,5 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.6",
   "downloadUrl": "https://github.com/xuimart/DrawColor/releases/latest/download/DrawColor_Setup.exe",
-  "changelog": "Correcao de compatibilidade: o painel agora carrega corretamente em versoes antigas do Photoshop. Idioma Portugues/Ingles no menu."
+  "changelog": "Correcao do layout amontoado no Photoshop 2021 (22.x) e versoes anteriores: abas, sliders e botoes voltam ao lugar."
 }

@@ -6,7 +6,7 @@
   'use strict';
 
   /** Versão local do plugin — atualizada a cada release. */
-  const DRAWCOLOR_VERSION = '1.0.5';
+  const DRAWCOLOR_VERSION = '1.0.6';
 
   /* ------------------------------------------------------------------ *
    * Diagnóstico de boot (DrawColor Diag)
@@ -45,9 +45,14 @@
       try { h.push('User-Agent       : ' + navigator.userAgent); } catch (e) {}
       try { h.push('Idioma navegador : ' + navigator.language); } catch (e) {}
       try {
-        var cs = (window.getComputedStyle(document.documentElement).getPropertyValue('--scale') || '').trim();
+        // A escala é escrita no #panel (o :root fica sempre em 1).
+        var panelEl = document.getElementById('panel');
+        var cs = panelEl ? (panelEl.style.getPropertyValue('--scale') || '').trim() : '';
         h.push('--scale aplicado : ' + (cs || '(VAZIO — layout NAO escalou)'));
       } catch (e) { h.push('--scale aplicado : (nao foi possivel ler)'); }
+      try {
+        h.push('Compat CSS       : ' + (window.CssCompat ? window.CssCompat.describe() : '(modulo ausente)'));
+      } catch (e) {}
       try { h.push('Node disponivel  : ' + (!!window.require)); } catch (e) {}
       try { h.push('CEP disponivel   : ' + (!!window.cep)); } catch (e) {}
       try {
@@ -58,8 +63,10 @@
       } catch (e) {}
       try {
         var feats = [];
+        feats.push('max()=' + CSS.supports('width', 'max(1px, 2px)'));
         feats.push('inset=' + CSS.supports('inset', '0'));
-        feats.push('gap=' + CSS.supports('gap', '1px'));
+        // No Chromium 74 dá true por causa do grid; o flex gap aparece no Compat CSS.
+        feats.push('gap(grid)=' + CSS.supports('gap', '1px'));
         feats.push('aspect-ratio=' + CSS.supports('aspect-ratio', '1'));
         feats.push(':has=' + CSS.supports('selector(:has(*))'));
         h.push('Suporte CSS      : ' + feats.join('  '));
