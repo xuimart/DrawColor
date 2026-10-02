@@ -96,7 +96,7 @@ namespace DrawColorInstaller
         CheckedListBox lstVersions;
         ProgressBar   progressBar;
         RichTextBox   rtbLog;
-        Button        btnInstall, btnBackup, btnBrowse, btnPix, btnKofi;
+        Button        btnInstall, btnBackup, btnBrowse, btnPix, btnKofi, btnDiag;
         Label         lblVersionsTitle;
 
         List<PhotoshopInstallation> foundInstalls = new List<PhotoshopInstallation>();
@@ -445,6 +445,12 @@ namespace DrawColorInstaller
             btnBackup.Font = new Font("Segoe UI", 7.5f);
             btnBackup.Click += BtnBackup_Click;
             pnlRight.Controls.Add(btnBackup);
+
+            // Botao Diagnostico (gera TXT de suporte, sem depender de .bat)
+            btnDiag = CreateFlatButton("Diagnostico", BG_PANEL, BORDER, new Point(276, 385), new Size(94, 22));
+            btnDiag.Font = new Font("Segoe UI", 7.5f);
+            btnDiag.Click += BtnDiag_Click;
+            pnlRight.Controls.Add(btnDiag);
 
             lblStatus = new Label
             {
@@ -1156,6 +1162,128 @@ namespace DrawColorInstaller
         void BtnBackup_Click(object sender, EventArgs e)
         {
             StartWorker(WorkerMode.Backup, GetSelectedInstalls());
+        }
+
+        // -- DIAGNOSTICO ------------------------------------------------------
+        // Gera um TXT de suporte sem depender de .bat nem de PowerShell:
+        // tudo e feito aqui em C#. Coleta SO, versoes do Photoshop, estado da
+        // extensao CEP instalada e o log interno escrito pelo proprio plugin
+        // (home\DrawColor-Diag\drawcolor-diagnostico.txt). Abre o resultado.
+        void BtnDiag_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine("==== DrawColor - Diagnostico do Sistema ====");
+                sb.AppendLine("Gerado em: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                sb.AppendLine("Instalador: v1.0.5");
+                sb.AppendLine();
+
+                sb.AppendLine("---- Windows ----");
+                sb.AppendLine("SO          : " + Environment.OSVersion.VersionString);
+                sb.AppendLine("Versao      : " + Environment.OSVersion.Version);
+                sb.AppendLine("Arquitetura : " + (Environment.Is64BitOperatingSystem ? "64 bits" : "32 bits"));
+                sb.AppendLine(".NET        : " + Environment.Version);
+                sb.AppendLine();
+
+                sb.AppendLine("---- Photoshop detectado ----");
+                if (foundInstalls == null || foundInstalls.Count == 0)
+                {
+                    sb.AppendLine("(nenhuma instalacao detectada pelo instalador)");
+                }
+                else
+                {
+                    foreach (var ps in foundInstalls)
+                    {
+                        sb.AppendLine("- " + ps.Name);
+                        sb.AppendLine("    pasta: " + ps.BasePath);
+                    }
+                }
+                sb.AppendLine();
+
+                sb.AppendLine("---- Extensao CEP do DrawColor ----");
+                string ext = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "Adobe", "CEP", "extensions", "com.drawcolor.colorwheel");
+                if (Directory.Exists(ext))
+                {
+                    sb.AppendLine("Instalada em: " + ext);
+                    string mani = Path.Combine(ext, "CSXS", "manifest.xml");
+                    if (File.Exists(mani))
+                    {
+                        foreach (var ln in File.ReadAllLines(mani))
+                            if (ln.IndexOf("ExtensionBundleVersion", StringComparison.OrdinalIgnoreCase) >= 0)
+                                sb.AppendLine("   " + ln.Trim());
+                    }
+                    foreach (var f in new[] { "js\\i18n.js", "js\\main.js", "js\\layout.js", "styles.css" })
+                        sb.AppendLine("   " + (File.Exists(Path.Combine(ext, f)) ? "[OK] " : "[FALTANDO] ") + f);
+                }
+                else
+                {
+                    sb.AppendLine("(NAO instalada em " + ext + ")");
+                }
+                sb.AppendLine();
+
+                sb.AppendLine("---- PlayerDebugMode (CSXS) ----");
+                for (int n = 6; n <= 16; n++)
+                {
+                    try
+                    {
+                        using (var k = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Adobe\CSXS." + n))
+                        {
+                            if (k != null)
+                            {
+                                var v = k.GetValue("PlayerDebugMode");
+                                if (v != null) sb.AppendLine("CSXS." + n + " PlayerDebugMode = " + v);
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                sb.AppendLine();
+
+                sb.AppendLine("---- Log interno do plugin (gerado ao abrir o painel) ----");
+                string diag = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    "DrawColor-Diag", "drawcolor-diagnostico.txt");
+                if (File.Exists(diag))
+                {
+                    sb.AppendLine("(encontrado em " + diag + ")");
+                    sb.AppendLine("-----------------------------------------------------------");
+                    sb.AppendLine(File.ReadAllText(diag));
+                    sb.AppendLine("-----------------------------------------------------------");
+                }
+                else
+                {
+                    sb.AppendLine("NAO encontrado.");
+                    sb.AppendLine("IMPORTANTE: abra o Photoshop e o painel DrawColor UMA VEZ,");
+                    sb.AppendLine("depois clique em Diagnostico de novo.");
+                }
+                sb.AppendLine();
+                sb.AppendLine("==== fim ====");
+
+                string outDir;
+                try { outDir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory); }
+                catch { outDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); }
+                if (string.IsNullOrEmpty(outDir) || !Directory.Exists(outDir))
+                    outDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+                string outFile = Path.Combine(outDir, "DrawColor-Diagnostico.txt");
+                File.WriteAllText(outFile, sb.ToString(), new System.Text.UTF8Encoding(false));
+
+                MessageBox.Show(
+                    "Diagnostico gerado em:\n" + outFile +
+                    "\n\nEnvie esse arquivo para:\ndrawcolorsuporte@xuimart.com.br",
+                    "Diagnostico pronto",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                try { Process.Start("notepad.exe", outFile); } catch { }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Nao foi possivel gerar o diagnostico:\n" + ex.Message,
+                    "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         void BtnRestore_Click(object sender, EventArgs e)

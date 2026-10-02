@@ -8,6 +8,104 @@
   /** Versão local do plugin — atualizada a cada release. */
   const DRAWCOLOR_VERSION = '1.0.5';
 
+  /* ------------------------------------------------------------------ *
+   * Diagnóstico de boot (DrawColor Diag)
+   *
+   * Para suporte: em CEF antigo não temos acesso ao console do cliente.
+   * Este coletor acumula o ambiente e QUALQUER erro de inicialização em
+   * memória e, no CEP (Node disponível), grava num arquivo de texto fixo
+   * que o cliente pode nos enviar. Um .bat de suporte apenas copia esse
+   * arquivo. É best-effort: se nada aqui funcionar, nunca derruba o boot.
+   * ------------------------------------------------------------------ */
+  const Diag = (function () {
+    var lines = [];
+    var started = Date.now();
+
+    function stamp() {
+      try { return new Date().toISOString(); } catch (e) { return String(Date.now()); }
+    }
+
+    function add(msg) {
+      try { lines.push('[' + stamp() + '] ' + msg); } catch (e) {}
+    }
+
+    function describeError(e) {
+      if (!e) return 'erro desconhecido';
+      var out = '';
+      try { out += (e.name || 'Error') + ': ' + (e.message || String(e)); } catch (x) { out += String(e); }
+      try { if (e.stack) out += '\n' + e.stack; } catch (x) {}
+      return out;
+    }
+
+    function header() {
+      var h = [];
+      h.push('==== DrawColor — Relatorio de Diagnostico ====');
+      h.push('Versao do plugin : ' + DRAWCOLOR_VERSION);
+      h.push('Data/hora        : ' + stamp());
+      try { h.push('User-Agent       : ' + navigator.userAgent); } catch (e) {}
+      try { h.push('Idioma navegador : ' + navigator.language); } catch (e) {}
+      try {
+        var cs = (window.getComputedStyle(document.documentElement).getPropertyValue('--scale') || '').trim();
+        h.push('--scale aplicado : ' + (cs || '(VAZIO — layout NAO escalou)'));
+      } catch (e) { h.push('--scale aplicado : (nao foi possivel ler)'); }
+      try { h.push('Node disponivel  : ' + (!!window.require)); } catch (e) {}
+      try { h.push('CEP disponivel   : ' + (!!window.cep)); } catch (e) {}
+      try {
+        if (window.__adobe_cep__ && window.__adobe_cep__.getHostEnvironment) {
+          var env = JSON.parse(window.__adobe_cep__.getHostEnvironment());
+          h.push('Host Photoshop   : ' + (env.appName || '?') + ' ' + (env.appVersion || '?'));
+        }
+      } catch (e) {}
+      try {
+        var feats = [];
+        feats.push('inset=' + CSS.supports('inset', '0'));
+        feats.push('gap=' + CSS.supports('gap', '1px'));
+        feats.push('aspect-ratio=' + CSS.supports('aspect-ratio', '1'));
+        feats.push(':has=' + CSS.supports('selector(:has(*))'));
+        h.push('Suporte CSS      : ' + feats.join('  '));
+      } catch (e) { h.push('Suporte CSS      : (CSS.supports indisponivel — CEF muito antigo)'); }
+      h.push('==============================================');
+      return h.join('\n');
+    }
+
+    function write() {
+      // Só grava em disco se Node estiver disponível (CEP). Best-effort.
+      try {
+        if (!window.require) { add('Node indisponivel — log so no console.'); return; }
+        var fs = window.require('fs');
+        var os = window.require('os');
+        var path = window.require('path');
+        var dir = path.join(os.homedir(), 'DrawColor-Diag');
+        try { fs.mkdirSync(dir); } catch (e) { /* já existe */ }
+        var file = path.join(dir, 'drawcolor-diagnostico.txt');
+        var body = header() + '\n\n--- Eventos de inicializacao ---\n' + lines.join('\n') + '\n';
+        fs.writeFileSync(file, body, 'utf8');
+        if (window.console && console.log) console.log('[DrawColor] diagnostico salvo em ' + file);
+      } catch (e) {
+        if (window.console && console.error) console.error('[DrawColor] falha ao salvar diagnostico:', e);
+      }
+    }
+
+    return {
+      add: add,
+      error: function (label, e) { add('ERRO em ' + label + ' -> ' + describeError(e)); },
+      write: write
+    };
+  })();
+
+  // Captura erros globais que escapem dos try/catch, para também irem ao log.
+  try {
+    window.addEventListener('error', function (ev) {
+      Diag.add('window.onerror -> ' + (ev && ev.message ? ev.message : 'erro') +
+        (ev && ev.filename ? ' @ ' + ev.filename + ':' + ev.lineno : ''));
+      Diag.write();
+    });
+    window.addEventListener('unhandledrejection', function (ev) {
+      Diag.add('unhandledrejection -> ' + (ev && ev.reason ? String(ev.reason) : '?'));
+      Diag.write();
+    });
+  } catch (e) {}
+
   /**
    * De onde vem o aviso de atualização. É um version.json no servidor da
    * Xuimart, subido por FTP (ver PADRAO_PLUGINS_XUIMART.md). Fica separado do
@@ -768,7 +866,9 @@
   function safe(label, fn) {
     try {
       fn();
+      Diag.add('OK: ' + label);
     } catch (e) {
+      Diag.error(label, e);
       if (window.console && console.error) console.error('[DrawColor] falha em ' + label + ':', e);
     }
   }
@@ -875,6 +975,12 @@
 
     // Verifica se há atualização disponível no GitHub (uma vez por sessão).
     safe('checkForUpdate', function () { checkForUpdate(false); });
+
+    // Grava o relatório de diagnóstico em disco (CEP). Sempre, mesmo sem erros:
+    // o cabeçalho mostra se --scale foi aplicado e quais recursos de CSS o CEF
+    // suporta, que é exatamente o que precisamos para o cliente de PS antigo.
+    Diag.add('initInteractive concluido');
+    Diag.write();
   }
 
   /* ---------------- License status handling ---------------- */
