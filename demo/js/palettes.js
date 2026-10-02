@@ -6,6 +6,7 @@ window.Palettes = (function () {
 
   const C = window.Color;
   const S = window.AppState;
+  const I18N = window.I18N;
 
   const STORAGE_KEY = 'colorWheelPlugin.palettes.v1';
   const MAX_COLORS = 64;
@@ -21,7 +22,7 @@ window.Palettes = (function () {
   function seed() {
     data.palettes = [{
       id: newId(),
-      name: 'Paleta 1',
+      name: I18N.t('pal.default1'),
       colors: ['#6A0700', '#B5451B', '#E0A458', '#3D5A6C', '#1B2431']
     }];
   }
@@ -54,7 +55,7 @@ window.Palettes = (function () {
     try {
       backing().setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (err) {
-      setStatus('Não foi possível salvar (armazenamento indisponível)');
+      setStatus(I18N.t('pal.saveFail'));
     }
   }
 
@@ -65,12 +66,12 @@ window.Palettes = (function () {
   }
 
   function createPalette() {
-    const p = { id: newId(), name: 'Paleta ' + (data.palettes.length + 1), colors: [] };
+    const p = { id: newId(), name: I18N.t('pal.named', { n: data.palettes.length + 1 }), colors: [] };
     data.palettes.push(p);
     data.activeId = p.id;
     save();
     render();
-    setStatus('Paleta criada');
+    setStatus(I18N.t('pal.created'));
   }
 
   function deletePalette() {
@@ -81,21 +82,21 @@ window.Palettes = (function () {
       active.colors = [];
       save();
       render();
-      setStatus('Paleta esvaziada');
+      setStatus(I18N.t('pal.emptied'));
       return;
     }
     data.palettes = data.palettes.filter((p) => p.id !== active.id);
     data.activeId = data.palettes[0].id;
     save();
     render();
-    setStatus('Paleta removida');
+    setStatus(I18N.t('pal.removed'));
   }
 
   function renameActive(name) {
     const active = getActive();
     if (!active) return;
     const trimmed = name.trim();
-    active.name = trimmed === '' ? 'Sem nome' : trimmed.slice(0, 40);
+    active.name = trimmed === '' ? I18N.t('pal.noname') : trimmed.slice(0, 40);
     save();
     render();
   }
@@ -105,13 +106,13 @@ window.Palettes = (function () {
     if (!active) return;
 
     const hex = S.getHex();
-    if (active.colors.includes(hex)) { setStatus(hex + ' já está na paleta'); return; }
-    if (active.colors.length >= MAX_COLORS) { setStatus('Paleta cheia (' + MAX_COLORS + ')'); return; }
+    if (active.colors.includes(hex)) { setStatus(I18N.t('pal.already', { hex: hex })); return; }
+    if (active.colors.length >= MAX_COLORS) { setStatus(I18N.t('pal.full', { max: MAX_COLORS })); return; }
 
     active.colors.push(hex);
     save();
     render();
-    setStatus(hex + ' adicionada');
+    setStatus(I18N.t('pal.added', { hex: hex }));
   }
 
   function removeColor(index) {
@@ -120,13 +121,13 @@ window.Palettes = (function () {
     const [removed] = active.colors.splice(index, 1);
     save();
     render();
-    setStatus(removed + ' removida');
+    setStatus(I18N.t('pal.colorRemoved', { hex: removed }));
   }
 
   // Preenche a paleta com os matizes disponíveis sob o limite de cor ativo
   function fillFromLimit() {
     const hues = S.getLimitedPalette();
-    if (!hues) { setStatus('Ative o limite de cor primeiro'); return; }
+    if (!hues) { setStatus(I18N.t('pal.enableLimit')); return; }
 
     const active = getActive();
     if (!active) return;
@@ -138,7 +139,7 @@ window.Palettes = (function () {
     });
     save();
     render();
-    setStatus(active.colors.length + ' matizes importados do limite');
+    setStatus(I18N.t('pal.huesImported', { n: active.colors.length }));
   }
 
   function fillFromBwRamp() {
@@ -147,19 +148,19 @@ window.Palettes = (function () {
     active.colors = S.getBwRamp().map((t) => C.rgbToHex(t.r, t.g, t.b));
     save();
     render();
-    setStatus(active.colors.length + ' valores importados da rampa B/W');
+    setStatus(I18N.t('pal.bwImported', { n: active.colors.length }));
   }
 
   function exportActive() {
     const active = getActive();
-    if (!active || active.colors.length === 0) { setStatus('Nada para exportar'); return; }
+    if (!active || active.colors.length === 0) { setStatus(I18N.t('pal.nothingExport')); return; }
 
     const field = document.getElementById('paletteExport');
     field.value = active.colors.join('\n');
     field.hidden = false;
     field.focus();
     field.select();
-    setStatus(active.colors.length + ' cores prontas para copiar');
+    setStatus(I18N.t('pal.readyCopy', { n: active.colors.length }));
   }
 
   function getActiveColors() {
@@ -182,7 +183,7 @@ window.Palettes = (function () {
     data.palettes.forEach((p) => {
       const opt = document.createElement('option');
       opt.value = p.id;
-      opt.textContent = `${p.name} (${p.colors.length})`;
+      opt.textContent = I18N.t('pal.optionLabel', { name: p.name, count: p.colors.length });
       if (active && p.id === active.id) opt.selected = true;
       select.appendChild(opt);
     });
@@ -196,7 +197,7 @@ window.Palettes = (function () {
     if (!active || active.colors.length === 0) {
       const empty = document.createElement('p');
       empty.className = 'palette-empty';
-      empty.textContent = 'Paleta vazia — use + para guardar a cor atual.';
+      empty.textContent = I18N.t('pal.empty');
       grid.appendChild(empty);
       return;
     }
@@ -210,8 +211,8 @@ window.Palettes = (function () {
       btn.className = 'palette-chip';
       const rgbChip = C.hexToRgb(hex);
       btn.style.background = rgbChip ? S.displayCss(rgbChip) : hex;
-      btn.title = hex + ' — clique para aplicar';
-      btn.setAttribute('aria-label', 'Aplicar ' + hex);
+      btn.title = I18N.t('pal.chip.title', { hex: hex });
+      btn.setAttribute('aria-label', I18N.t('pal.chip.aria', { hex: hex }));
       btn.addEventListener('click', () => {
         const rgb = C.hexToRgb(hex);
         if (rgb) S.setRgb(rgb.r, rgb.g, rgb.b, { commit: true, relock: true });
@@ -221,8 +222,8 @@ window.Palettes = (function () {
       del.type = 'button';
       del.className = 'palette-del';
       del.textContent = '×';
-      del.title = 'Remover ' + hex;
-      del.setAttribute('aria-label', 'Remover ' + hex);
+      del.title = I18N.t('pal.del.title', { hex: hex });
+      del.setAttribute('aria-label', I18N.t('pal.del.aria', { hex: hex }));
       del.addEventListener('click', (evt) => {
         evt.stopPropagation();
         removeColor(index);

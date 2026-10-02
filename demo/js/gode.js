@@ -8,6 +8,7 @@ window.Gode = (function () {
 
   const C = window.Color;
   const S = window.AppState;
+  const I18N = window.I18N;
 
   const W = 340, H = 190;
   const SURFACE = '#d8d2c6';        // cor da paleta física
@@ -249,7 +250,7 @@ window.Gode = (function () {
   // Dispõe as cores da paleta ativa como pastilhas de tinta prontas para usar
   function loadPalette() {
     const colors = window.Palettes.getActiveColors();
-    if (colors.length === 0) { setHint('Paleta ativa está vazia'); return; }
+    if (colors.length === 0) { setHint(I18N.t('gode.hint.empty')); return; }
 
     const perRow = Math.min(colors.length, 8);
     const pad = 26;
@@ -271,7 +272,7 @@ window.Gode = (function () {
       ctx.strokeStyle = 'rgba(0,0,0,.25)';
       ctx.stroke();
     });
-    setHint('Pastilhas dispostas — espatule para misturar');
+    setHint(I18N.t('gode.hint.laid'));
   }
 
   function setHint(msg) {
@@ -288,9 +289,9 @@ window.Gode = (function () {
     });
     canvas.style.cursor = tool === 'pick' ? 'copy' : 'crosshair';
     setHint(
-      tool === 'brush' ? 'Pincel — pinta com a cor atual, misturando no que já existe'
-      : tool === 'smudge' ? 'Espátula — arrasta e mistura a tinta que já está no godê'
-      : 'Conta-gotas — clique para capturar a cor misturada'
+      tool === 'brush' ? I18N.t('gode.hint.brush')
+      : tool === 'smudge' ? I18N.t('gode.hint.smudge')
+      : I18N.t('gode.hint.pick')
     );
   }
 
@@ -397,7 +398,7 @@ window.Gode = (function () {
       panY = my - (my - panY) * (zoomLevel / oldZoom);
 
       applyTransform();
-      setHint('Zoom ' + Math.round(zoomLevel * 100) + '%');
+      setHint(I18N.t('gode.hint.zoom', { n: Math.round(zoomLevel * 100) }));
     }, { passive: false });
 
     // Pan com botão do meio (scroll click) arrastar — no wrapper
@@ -469,20 +470,20 @@ window.Gode = (function () {
     document.getElementById('godeClear').addEventListener('click', () => {
       saveSnapshot();
       clear();
-      setHint('Godê limpo');
+      setHint(I18N.t('gode.hint.cleared'));
     });
     document.getElementById('godeClearInline').addEventListener('click', () => {
       saveSnapshot();
       clear();
-      setHint('Godê limpo');
+      setHint(I18N.t('gode.hint.cleared'));
     });
     document.getElementById('godeUndo').addEventListener('click', () => {
       undoCanvas();
-      setHint('Desfazer');
+      setHint(I18N.t('gode.hint.undo'));
     });
     document.getElementById('godeRedo').addEventListener('click', () => {
       redoCanvas();
-      setHint('Refazer');
+      setHint(I18N.t('gode.hint.redo'));
     });
     document.getElementById('godeLoad').addEventListener('click', loadPalette);
 
@@ -504,7 +505,7 @@ window.Gode = (function () {
         panX = 0;
         panY = 0;
         applyTransform();
-        setHint('Zoom 100%');
+        setHint(I18N.t('gode.hint.zoom', { n: 100 }));
         return;
       }
 
@@ -513,13 +514,13 @@ window.Gode = (function () {
         if (evt.key === 'z' && !evt.shiftKey) {
           evt.preventDefault();
           undoCanvas();
-          setHint('Desfazer');
+          setHint(I18N.t('gode.hint.undo'));
           return;
         }
         if ((evt.key === 'z' && evt.shiftKey) || evt.key === 'y') {
           evt.preventDefault();
           redoCanvas();
-          setHint('Refazer');
+          setHint(I18N.t('gode.hint.redo'));
           return;
         }
       }

@@ -16,6 +16,8 @@
 window.Overlay = (function () {
   'use strict';
 
+  var I18N = window.I18N;
+
   /* ============================================================
    * Configuração
    * ============================================================ */
@@ -56,39 +58,40 @@ window.Overlay = (function () {
       case 'login':
         html =
           '<div class="dc-overlay-card">' +
-            '<h2 class="dc-overlay-title">Ative sua conta</h2>' +
-            '<p class="dc-overlay-text">Faça login para usar o DrawColor.</p>' +
-            '<button class="dc-overlay-btn dc-overlay-btn--primary" id="dc-overlay-login">Login com Google</button>' +
+            '<h2 class="dc-overlay-title">' + I18N.t('ov.login.title') + '</h2>' +
+            '<p class="dc-overlay-text">' + I18N.t('ov.login.text') + '</p>' +
+            '<button class="dc-overlay-btn dc-overlay-btn--primary" id="dc-overlay-login">' + I18N.t('ov.login.btn') + '</button>' +
           '</div>';
         break;
 
       case 'expired':
         html =
           '<div class="dc-overlay-card">' +
-            '<h2 class="dc-overlay-title">Trial expirado</h2>' +
-            '<p class="dc-overlay-text">Trial expirado — Compre sua licença</p>' +
-            '<button class="dc-overlay-btn dc-overlay-btn--primary" id="dc-overlay-store">Comprar licença</button>' +
+            '<h2 class="dc-overlay-title">' + I18N.t('ov.expired.title') + '</h2>' +
+            '<p class="dc-overlay-text">' + I18N.t('ov.expired.text') + '</p>' +
+            '<button class="dc-overlay-btn dc-overlay-btn--primary" id="dc-overlay-store">' + I18N.t('ov.expired.btn') + '</button>' +
           '</div>';
         break;
 
       case 'machine_limit':
         var machineItems = '';
         var machines = state.machines || [];
+        var locale = I18N.get() === 'pt' ? 'pt-BR' : 'en-US';
         for (var i = 0; i < machines.length; i++) {
           var m = machines[i];
           var name = m.name || m.id;
-          var lastSeen = m.lastSeen ? new Date(m.lastSeen).toLocaleDateString('pt-BR') : '—';
+          var lastSeen = m.lastSeen ? new Date(m.lastSeen).toLocaleDateString(locale) : '—';
           machineItems +=
             '<li class="dc-overlay-machine">' +
               '<span class="dc-overlay-machine-name">' + _escapeHtml(name) + '</span>' +
               '<span class="dc-overlay-machine-date">' + lastSeen + '</span>' +
-              '<button class="dc-overlay-btn dc-overlay-btn--sm" data-machine-id="' + _escapeHtml(m.id) + '">Desativar</button>' +
+              '<button class="dc-overlay-btn dc-overlay-btn--sm" data-machine-id="' + _escapeHtml(m.id) + '">' + I18N.t('ov.machine.deactivate') + '</button>' +
             '</li>';
         }
         html =
           '<div class="dc-overlay-card">' +
-            '<h2 class="dc-overlay-title">Limite de máquinas</h2>' +
-            '<p class="dc-overlay-text">Você já ativou 2 máquinas. Desative uma para continuar aqui.</p>' +
+            '<h2 class="dc-overlay-title">' + I18N.t('ov.machine.title') + '</h2>' +
+            '<p class="dc-overlay-text">' + I18N.t('ov.machine.text') + '</p>' +
             '<ul class="dc-overlay-machine-list">' + machineItems + '</ul>' +
           '</div>';
         break;
@@ -96,24 +99,24 @@ window.Overlay = (function () {
       case 'offline_expired':
         html =
           '<div class="dc-overlay-card">' +
-            '<h2 class="dc-overlay-title">Conexão necessária</h2>' +
-            '<p class="dc-overlay-text">Conecte à internet para revalidar sua licença.</p>' +
+            '<h2 class="dc-overlay-title">' + I18N.t('ov.offline.title') + '</h2>' +
+            '<p class="dc-overlay-text">' + I18N.t('ov.offline.text') + '</p>' +
           '</div>';
         break;
 
       case 'error':
         html =
           '<div class="dc-overlay-card">' +
-            '<h2 class="dc-overlay-title">Erro</h2>' +
-            '<p class="dc-overlay-text">' + _escapeHtml(state.message || 'Erro desconhecido') + '</p>' +
-            '<button class="dc-overlay-btn dc-overlay-btn--primary" id="dc-overlay-retry">Tentar novamente</button>' +
+            '<h2 class="dc-overlay-title">' + I18N.t('ov.error.title') + '</h2>' +
+            '<p class="dc-overlay-text">' + _escapeHtml(state.message || I18N.t('ov.error.unknown')) + '</p>' +
+            '<button class="dc-overlay-btn dc-overlay-btn--primary" id="dc-overlay-retry">' + I18N.t('ov.error.retry') + '</button>' +
           '</div>';
         break;
 
       default:
         html =
           '<div class="dc-overlay-card">' +
-            '<p class="dc-overlay-text">Estado desconhecido</p>' +
+            '<p class="dc-overlay-text">' + I18N.t('ov.unknown') + '</p>' +
           '</div>';
     }
 
@@ -189,8 +192,8 @@ window.Overlay = (function () {
         window.License.deactivateMachine(machineId).then(function (result) {
           if (!result.success) {
             target.disabled = false;
-            target.textContent = 'Erro';
-            setTimeout(function () { target.textContent = 'Desativar'; }, 2000);
+            target.textContent = I18N.t('ov.machine.error');
+            setTimeout(function () { target.textContent = I18N.t('ov.machine.deactivate'); }, 2000);
           }
           // Se sucesso, License.validate() será chamado e o overlay será
           // atualizado ou removido automaticamente pelo status change.

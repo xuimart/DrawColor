@@ -6,7 +6,7 @@
   'use strict';
 
   /** Versão local do plugin — atualizada a cada release. */
-  const DRAWCOLOR_VERSION = '1.0.3';
+  const DRAWCOLOR_VERSION = '1.0.4';
 
   /**
    * De onde vem o aviso de atualização. É um version.json no servidor da
@@ -50,7 +50,7 @@
     if (options.compare && prev) {
       const rgb = C.hsvToRgb(prev.h, prev.s, prev.v);
       prevEl.style.background = S.displayCss(rgb);
-      fgEl.title += ' · anterior ' + C.rgbToHex(rgb.r, rgb.g, rgb.b);
+      fgEl.title += ' · ' + I18N.t('swatch.previous') + ' ' + C.rgbToHex(rgb.r, rgb.g, rgb.b);
     }
   }
 
@@ -123,6 +123,19 @@
 
     const lumOpt = document.getElementById('optLumLock');
     lumOpt.addEventListener('change', () => S.setLuminosityLock(lumOpt.checked));
+
+    /* seletor de idioma PT / EN */
+    const langPt = document.getElementById('langPt');
+    const langEn = document.getElementById('langEn');
+    function syncLangButtons() {
+      const lang = I18N.get();
+      if (langPt) langPt.setAttribute('aria-checked', String(lang === 'pt'));
+      if (langEn) langEn.setAttribute('aria-checked', String(lang === 'en'));
+    }
+    if (langPt) langPt.addEventListener('click', () => I18N.set('pt'));
+    if (langEn) langEn.addEventListener('click', () => I18N.set('en'));
+    I18N.onChange(syncLangButtons);
+    syncLangButtons();
   }
 
   /* ---------------- Rack de harmonias (Requisito 3.5) ---------------- */
@@ -147,15 +160,16 @@
     arc.innerHTML = '';
 
     if (mode === 'harmony') {
-      arc.setAttribute('aria-label', 'Esquema de harmonia');
+      arc.setAttribute('aria-label', I18N.t('harmony.scheme.aria'));
 
       S.HARMONY_SCHEMES.forEach((scheme, i) => {
         const btn = document.createElement('button');
         btn.className = 'harmony-btn';
         btn.type = 'button';
-        btn.title = scheme.label;
+        const schemeLabel = I18N.t('scheme.' + scheme.id);
+        btn.title = schemeLabel;
         btn.setAttribute('role', 'radio');
-        btn.setAttribute('aria-label', scheme.label);
+        btn.setAttribute('aria-label', schemeLabel);
         btn.dataset.scheme = scheme.id;
         // Âncoras harmony.1..6 do Layout_De_Referência
         btn.dataset.layout = 'harmony.' + (i + 1);
@@ -171,15 +185,15 @@
         arc.appendChild(btn);
       });
     } else {
-      arc.setAttribute('aria-label', 'Formato da máscara');
+      arc.setAttribute('aria-label', I18N.t('gamut.shape.aria'));
 
       S.MASK_KINDS.forEach((kind, i) => {
         const btn = document.createElement('button');
         btn.className = 'mask-kind';
         btn.type = 'button';
-        btn.title = MASK_KIND_LABELS[kind];
+        btn.title = maskKindLabel(kind);
         btn.setAttribute('role', 'radio');
-        btn.setAttribute('aria-label', MASK_KIND_LABELS[kind]);
+        btn.setAttribute('aria-label', maskKindLabel(kind));
         btn.dataset.kind = kind;
         // Os formatos ocupam as mesmas seis âncoras do arco de harmonias
         btn.dataset.layout = 'harmony.' + (i + 1);
@@ -340,14 +354,8 @@
     full:   { cx: 0, cy: 0, rx: 1, ry: 1, angle: 0 }
   };
 
-  const MASK_KIND_LABELS = {
-    triangle: 'Triângulo',
-    rect: 'Barra',
-    ellipse: 'Elipse',
-    diamond: 'Losango',
-    dual: 'Elipse + círculo',
-    hexagon: 'Hexágono'
-  };
+  const I18N = window.I18N;
+  function maskKindLabel(kind) { return I18N.t('maskkind.' + kind); }
 
   function initMaskRack() {
     const rack = document.getElementById('maskRack');
@@ -358,9 +366,9 @@
       btn.type = 'button';
       btn.className = 'mask-kind';
       btn.dataset.kind = kind;
-      btn.title = MASK_KIND_LABELS[kind];
+      btn.title = maskKindLabel(kind);
       btn.setAttribute('role', 'radio');
-      btn.setAttribute('aria-label', MASK_KIND_LABELS[kind]);
+      btn.setAttribute('aria-label', maskKindLabel(kind));
 
       const icon = document.createElement('canvas');
       icon.width = icon.height = 24;
@@ -543,7 +551,7 @@
     const resetBtn = document.getElementById('harmonyReset');
 
     if (offsets.length === 0) {
-      el.textContent = 'Nenhum esquema ativo';
+      el.textContent = I18N.t('harmony.none');
       resetBtn.disabled = true;
       return;
     }
@@ -551,7 +559,7 @@
     const list = offsets
       .map((off) => (off > 0 ? '+' : '') + Math.round(off) + '°')
       .join('  ·  ');
-    el.textContent = list + (S.isHarmonyEdited() ? '  (editado)' : '');
+    el.textContent = list + (S.isHarmonyEdited() ? '  ' + I18N.t('harmony.edited') : '');
     resetBtn.disabled = !S.isHarmonyEdited();
   }
 
@@ -647,8 +655,8 @@
     rybBtn.setAttribute('aria-checked', String(ryb));
 
     document.getElementById('spaceHint').textContent = ryb
-      ? 'Roda do pintor: vermelho, amarelo e azul como primárias'
-      : 'Roda da luz: vermelho, verde e azul como primárias';
+      ? I18N.t('wheel.spaceHint.ryb')
+      : I18N.t('wheel.spaceHint.rgb');
   }
 
   /* ---------------- Rotação da roda ---------------- */
@@ -715,21 +723,22 @@
   function refreshStatus() {
     const hsv = S.getHsv();
     const rgb = S.getRgb();
-    const limit = S.state.limit.enabled ? ` · limite ${S.state.limit.hueSteps}h` : '';
-    const rot = S.state.wheelRotation ? ` · giro ${Math.round(S.state.wheelRotation)}°` : '';
-    const lum = S.state.lumLock ? ` · L travado ${S.state.lockedL.toFixed(0)}` : '';
+    const limit = S.state.limit.enabled ? I18N.t('status.limit', { n: S.state.limit.hueSteps }) : '';
+    const rot = S.state.wheelRotation ? I18N.t('status.spin', { n: Math.round(S.state.wheelRotation) }) : '';
+    const lum = S.state.lumLock ? I18N.t('status.lum', { n: S.state.lockedL.toFixed(0) }) : '';
     const mask = S.state.gamut.enabled
-      ? ` · máscara${S.state.gamut.locked ? ' travada' : ''}`
+      ? I18N.t('status.mask') + (S.state.gamut.locked ? I18N.t('status.maskLocked') : '')
       : '';
-    const vc = S.state.valueCheck ? ' · valores' : '';
+    const vc = S.state.valueCheck ? I18N.t('status.values') : '';
     // Só aparece na roda do pintor: o RGB é o padrão e não precisa de aviso.
-    const space = S.state.wheelSpace === 'ryb' ? ' · roda RYB' : '';
-    const shapeName = { triangle: 'triângulo', square: 'quadrado', disc: 'disco' }[S.state.shape];
+    const space = S.state.wheelSpace === 'ryb' ? I18N.t('status.rybWheel') : '';
+    const shapeName = I18N.t('status.shape.' + S.state.shape);
+    const hist = I18N.t('status.history', { i: S.state.historyIndex + 1, n: S.state.history.length });
 
     document.getElementById('statusBar').textContent =
-      `Demo offline · H ${Math.round(hsv.h)}° S ${Math.round(hsv.s)}% V ${Math.round(hsv.v)}% · ` +
+      `${I18N.t('status.offline')} · H ${Math.round(hsv.h)}° S ${Math.round(hsv.s)}% V ${Math.round(hsv.v)}% · ` +
       `RGB ${rgb.r},${rgb.g},${rgb.b}${limit}${rot}${lum}${mask}${vc}${space} · ` +
-      `${shapeName} · histórico ${S.state.historyIndex + 1}/${S.state.history.length}`;
+      `${shapeName}${hist}`;
   }
 
   /* ---------------- Boot ---------------- */
@@ -805,6 +814,16 @@
     S.subscribe(refreshChrome);
     refreshChrome();
 
+    // Trocar o idioma reaplica os textos estáticos (via I18N) e repinta tudo
+    // que é montado em JS: arco de harmonias/formatos, status, abas, etc.
+    I18N.onChange(function () {
+      buildArc();
+      if (window.Panels && window.Panels.relabel) window.Panels.relabel();
+      if (window.Palettes && window.Palettes.render) window.Palettes.render();
+      if (window.Docking && window.Docking.relabel) window.Docking.relabel();
+      refreshChrome();
+    });
+
     // Ponte com o Photoshop: no navegador isso é um no-op.
     if (window.PSBridge) window.PSBridge.init();
 
@@ -855,8 +874,8 @@
     var badge = document.createElement('div');
     badge.id = 'trialBadge';
     badge.style.cssText = 'background:#de2246;color:#fff;text-align:center;padding:3px 8px;font-size:10px;font-weight:500;cursor:pointer;line-height:1.4;position:fixed;top:0;left:0;right:0;z-index:9999;';
-    badge.innerHTML = daysLeft + (daysLeft === 1 ? ' dia restante' : ' dias restantes')
-      + ' · <u>Comprar licença</u>';
+    badge.innerHTML = I18N.t(daysLeft === 1 ? 'trial.day' : 'trial.days', { n: daysLeft })
+      + ' · <u>' + I18N.t('trial.buy') + '</u>';
     badge.addEventListener('click', function () {
       window.open('https://buy.stripe.com/test_14A5kxfcUd386Nr3Pr3cc00', '_blank');
     });
@@ -974,7 +993,7 @@
     try {
       if (!manual && sessionStorage.getItem('drawcolor-update-checked')) return;
 
-      if (manual) setStatus('Verificando…');
+      if (manual) setStatus(I18N.t('update.checking'));
 
       fetchVersionJson(UPDATE_CHECK_URL + '?t=' + Date.now())
         .then(function (data) {
@@ -988,8 +1007,8 @@
 
           if (manual) {
             setStatus(nova
-              ? 'Nova versão ' + data.version + ' disponível.'
-              : 'Você está na versão mais recente.');
+              ? I18N.t('update.available', { v: data.version })
+              : I18N.t('update.latest'));
           }
 
           if (!manual) sessionStorage.setItem('drawcolor-update-checked', '1');
@@ -997,10 +1016,10 @@
         .catch(function () {
           // Automático falha em silêncio (sem internet, ou version.json ainda
           // não publicado). No manual o usuário pediu, então merece retorno.
-          if (manual) setStatus('Não foi possível verificar agora. Tente mais tarde.');
+          if (manual) setStatus(I18N.t('update.failRetry'));
         });
     } catch (e) {
-      if (manual) setStatus('Não foi possível verificar agora.');
+      if (manual) setStatus(I18N.t('update.fail'));
     }
   }
 
@@ -1084,9 +1103,9 @@
     var banner = document.getElementById('updateBanner');
     if (!banner) return;
 
-    var texto = 'Nova versão ' + data.version + ' disponível';
+    var texto = I18N.t('update.banner', { v: data.version });
     if (data.changelog) texto += ' — ' + data.changelog;
-    texto += '  ·  clique para baixar';
+    texto += I18N.t('update.bannerDownload');
 
     var label = document.getElementById('updateBannerText');
     if (label) label.textContent = texto;
@@ -1122,6 +1141,9 @@
    * LayoutStore e as paletas leriam vazio e sobrescreveriam o perfil salvo.
    */
   function boot() {
+    // Idioma antes de tudo: aplica os textos estáticos marcados no HTML e fixa
+    // o idioma detectado (localStorage/navegador) para o `t()` dos módulos.
+    if (window.I18N && window.I18N.init) window.I18N.init();
     if (window.Platform && window.Platform.ready) {
       window.Platform.ready().then(init, init);
     } else {

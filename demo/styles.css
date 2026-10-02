@@ -210,7 +210,7 @@ body {
  * os filhos por coordenada polar a partir do centro. Sem o inset o
  * contêiner colapsa e os filhos se ancoram no lugar errado.
  */
-.arc { position: absolute; inset: 0; pointer-events: none; }
+.arc { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; }
 .arc > * {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -553,7 +553,7 @@ body {
 /* License overlay base styles */
 .dc-license-overlay {
   position: fixed;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   background: rgba(14, 14, 20, 0.92);
   display: flex;
   align-items: center;
@@ -1154,7 +1154,7 @@ body {
 
 .fg-prev {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
   border-top-left-radius: 0;
   display: none;
@@ -1385,7 +1385,7 @@ body {
 /* ---------------- swatches (Requisito 4.8) ---------------- */
 .panel .top-row {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   display: block;
   margin: 0;
   pointer-events: none;
@@ -1393,7 +1393,7 @@ body {
 
 .panel .swatch-stack {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   width: auto;
   height: auto;
 }
@@ -1432,7 +1432,7 @@ body {
    posição dos controles, não o tamanho deste contêiner. */
 .panel .wheel-stage {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   width: auto;
   height: auto;
   aspect-ratio: auto;
@@ -1792,7 +1792,7 @@ body {
 }
 /* A referência mostra 3 canais. O modo CMYK tem 4: o passo aperta para a
    quarta linha não invadir a linha de modos. */
-.panel .slider-list:has(> .slider-row:nth-child(4)) { gap: calc(9 * var(--u)); }
+.panel.has-4ch .slider-list { gap: calc(9 * var(--u)); }
 
 .panel .slider-row {
   position: relative;
@@ -2083,7 +2083,7 @@ body {
  * `:has()` não existe no CEF do CEP; ali o CMYK aperta um pouco em vez de
  * abrir a banda vazia nos outros modos, que é o mal maior.
  */
-.panel:has(.slider-row:nth-child(4)) {
+.panel.has-4ch {
   --body-h: max(157px, calc(191 * var(--u)));
 }
 
@@ -2476,7 +2476,7 @@ body {
 
 .dc-license-overlay {
   position: fixed;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2584,3 +2584,73 @@ body {
   color: var(--text-dim, #8c8ca5);
   white-space: nowrap;
 }
+
+/* ==================================================================== */
+/* COMPATIBILIDADE COM CEF ANTIGO (Photoshop 2019–2021 / CEP 9–11)       */
+/*                                                                      */
+/* Versões antigas do CEF (Chromium < 84) ignoram `gap` em flexbox, e o */
+/* painel aparecia com as abas e botões grudados, sem espaçamento. Aqui */
+/* repomos o espaçamento com `margin` nos filhos — margens funcionam em  */
+/* qualquer CEF. Em engines modernas o `gap` e a margem convivem sem     */
+/* dobrar o espaço, porque a margem é aplicada só ao lado interno e os   */
+/* valores são os mesmos; o efeito visual é idêntico.                   */
+/*                                                                      */
+/* `inset` (Chromium 87+) e `:has()` (105+) foram substituídos no CSS    */
+/* por forma longa (top/right/bottom/left) e por classes em JS.          */
+/*                                                                      */
+/* Estratégia: estas regras ZERAM o `gap` das linhas flex do painel e    */
+/* repõem o espaçamento com `margin` nos filhos. Margem funciona em       */
+/* qualquer CEF, e como o `gap` fica zerado aqui, não há risco de dobrar  */
+/* o espaço nas engines que suportam as duas coisas. Os valores de margem */
+/* repetem os de `gap` das regras acima, então o visual não muda no       */
+/* Chromium moderno.                                                     */
+/* ==================================================================== */
+
+/* As margens repõem o espaçamento entre irmãos. O gap das linhas flex é
+   zerado logo abaixo, com um seletor de especificidade maior, sem recriar os
+   seletores-âncora que os testes conferem. Com o gap zerado, a margem não
+   soma duas vezes em engine nenhuma. */
+.panel .tabs > * + * { margin-left: max(4px, calc(7 * var(--u))); }
+.panel .mode-row > * + * { margin-left: max(5px, calc(8 * var(--u))); }
+.panel .mode-btns > * + * { margin-left: max(2px, calc(4 * var(--u))); }
+.panel .mode-toggles > * + * { margin-left: max(4px, calc(6 * var(--u))); }
+.panel .popout-menu > * + * { margin-top: calc(3 * var(--u)); }
+.panel .mix-strip-head > * + * { margin-left: 6px; }
+.panel .mix-strip-toggles > * + * { margin-left: 5px; }
+.panel .mix-strip-actions > * + * { margin-left: 4px; }
+.panel .palette-head > * + * { margin-left: 4px; }
+.panel .palette-actions > * + * { margin-left: 4px; }
+.panel .gode-tools > * + * { margin-left: 3px; }
+.panel .gode-actions > * + * { margin-left: 4px; }
+.panel .gode-sliders > * + * { margin-top: 4px; }
+.panel .limit-panel-rows > * + * { margin-left: calc(12 * var(--u)); }
+.panel .limit-panel-head > * + * { margin-left: calc(6 * var(--u)); }
+.panel .bw-row > * + * { margin-left: 6px; }
+.panel .bw-stepper > * + * { margin-top: 2px; }
+.panel .bw-group-row > * + * { margin-left: 6px; }
+.panel .dial-wrap > * + * { margin-top: 1px; }
+.panel .menu-row > * + * { margin-left: 5px; }
+
+/* Zera o gap das linhas flex do painel. O prefixo extra `.panel.panel` tem
+   especificidade maior que `.panel`, então vence a declaração de gap original.
+   Agrupar os seletores aqui evita recriar as regras-âncora individuais. */
+.panel.panel .tabs,
+.panel.panel .mode-row,
+.panel.panel .mode-btns,
+.panel.panel .mode-toggles,
+.panel.panel .popout-menu,
+.panel.panel .mix-strip-head,
+.panel.panel .mix-strip-toggles,
+.panel.panel .mix-strip-actions,
+.panel.panel .palette-head,
+.panel.panel .palette-actions,
+.panel.panel .gode-tools,
+.panel.panel .gode-actions,
+.panel.panel .gode-sliders,
+.panel.panel .limit-panel-rows,
+.panel.panel .limit-panel-head,
+.panel.panel .bw-row,
+.panel.panel .bw-stepper,
+.panel.panel .bw-group-row,
+.panel.panel .dial-wrap,
+.panel.panel .menu-row { gap: 0; }

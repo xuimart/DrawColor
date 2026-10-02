@@ -22,6 +22,7 @@ const DIST = path.join(ROOT, 'dist');
 /** Ordem de carga do núcleo. platform.js vem primeiro: os outros consultam
  *  window.Platform durante a própria definição. */
 const CORE_SCRIPTS = [
+  'i18n.js',
   'platform.js',
   'fingerprint.js',
   'overlay.js',

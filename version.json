@@ -1,5 +1,5 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.4",
   "downloadUrl": "https://github.com/xuimart/DrawColor/releases/latest/download/DrawColor_Setup.exe",
-  "changelog": "Layout responsivo: roda ao lado dos sliders em painel largo, ferramentas nas bordas e Verificar atualizacao no topo do menu"
+  "changelog": "Idioma Portugues/Ingles no menu e correcao de compatibilidade com versoes antigas do Photoshop"
 }

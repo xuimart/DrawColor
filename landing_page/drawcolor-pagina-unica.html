@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DrawColor — Roda de cores profissional para Photoshop · Xuimart</title>
+  <meta name="description" content="Plugin para Adobe Photoshop com roda de cores, harmonias profissionais, máscara de gamut, misturador e paletas. Licença única por R$ 29,90, com atualizações incluídas.">
+  <meta name="theme-color" content="#0e0e14">
+
+  <meta property="og:type" content="product">
+  <meta property="og:title" content="DrawColor — Color wheel for Photoshop">
+  <meta property="og:description" content="Color wheel, harmonies, gamut mask, mixer and palettes for Adobe Photoshop. One-time license.">
+  <meta property="og:image" content="https://www.xuimart.com.br/drawcolor/IMG/panel-wide.png">
+  <meta property="og:url" content="https://www.xuimart.com.br/drawcolor/">
+
+  <link rel="icon" type="image/png" href="https://www.xuimart.com.br/drawcolor/IMG/drawcolor-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+  :root {
+    --bg-dark:#0e0e14; --bg-card:#181822; --bg-panel:#20202e;
+    --accent:#de2246; --accent-hi:#ff3a5e; --success:#22c864; --cyan:#00c8c8;
+    --text:#f0f0ff; --text-dim:#8c8ca5; --border:#37374b; --radius:14px; --maxw:1120px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html { scroll-behavior:smooth; }
+  body { background:var(--bg-dark); color:var(--text); font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  a { color:inherit; text-decoration:none; }
+  img { max-width:100%; height:auto; display:block; }
+  .wrap { width:100%; max-width:var(--maxw); margin:0 auto; padding:0 24px; }
+  .wrap-narrow { max-width:760px; }
+
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:12px 22px; border-radius:10px; border:1px solid transparent; font-weight:600; font-size:15px; cursor:pointer; transition:transform .15s,background .15s,border-color .15s; white-space:nowrap; }
+  .btn:hover { transform:translateY(-1px); }
+  .btn-sm { padding:9px 16px; font-size:14px; }
+  .btn-lg { padding:15px 30px; font-size:16px; }
+  .btn-accent { background:var(--accent); color:#fff; box-shadow:0 8px 24px rgba(222,34,70,.32); }
+  .btn-accent:hover { background:var(--accent-hi); }
+  .btn-ghost { background:rgba(255,255,255,.04); border-color:var(--border); color:var(--text); }
+  .btn-ghost:hover { background:rgba(255,255,255,.08); border-color:var(--text-dim); }
+
+  .lang-switch { position:fixed; top:16px; right:16px; z-index:60; display:inline-flex; background:rgba(14,14,20,.8); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); border:1px solid var(--border); border-radius:999px; padding:3px; gap:2px; }
+  .lang-switch button { border:none; background:transparent; color:var(--text-dim); cursor:pointer; font-family:inherit; font-weight:700; font-size:12.5px; letter-spacing:.5px; padding:6px 12px; border-radius:999px; transition:background .15s,color .15s; }
+  .lang-switch button.is-active { background:var(--accent); color:#fff; }
+
+  .hero { position:relative; overflow:hidden; padding:72px 0 80px; }
+  .hero-glow { position:absolute; top:-220px; left:50%; transform:translateX(-50%); width:900px; height:900px; background:radial-gradient(circle,rgba(222,34,70,.22),rgba(222,34,70,0) 62%); pointer-events:none; }
+  .hero-mark { position:absolute; right:-80px; bottom:-120px; width:420px !important; height:auto !important; max-width:420px !important; opacity:.04; pointer-events:none; filter:grayscale(1); }
+  .hero-inner { position:relative; display:grid; grid-template-columns:1.1fr .9fr; gap:48px; align-items:center; }
+  .pill { display:inline-block; padding:6px 14px; border-radius:999px; background:rgba(222,34,70,.12); border:1px solid rgba(222,34,70,.4); color:#ffb3c0; font-size:13px; font-weight:600; margin-bottom:20px; }
+  .hero h1 { font-size:clamp(34px,5vw,56px); line-height:1.08; font-weight:800; letter-spacing:-1px; }
+  .grad { background:linear-gradient(100deg,var(--accent-hi),#ff8a5c 70%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .lead { color:var(--text-dim); font-size:18px; margin:20px 0 28px; max-width:540px; }
+  .hero-cta { display:flex; flex-wrap:wrap; gap:12px; }
+  .hero-note { color:var(--text-dim); font-size:14px; margin-top:16px; }
+  .hero-art { display:flex; justify-content:center; }
+  .hero-shot { width:auto; max-height:560px; border-radius:var(--radius); border:1px solid var(--border); box-shadow:0 30px 70px rgba(0,0,0,.55); background:var(--bg-dark); }
+
+  .section { padding:84px 0; }
+  .section-alt { background:var(--bg-card); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+  .eyebrow { color:var(--accent-hi); font-weight:700; font-size:13px; letter-spacing:2px; text-transform:uppercase; margin-bottom:10px; }
+  .section-title { font-size:clamp(26px,3.4vw,38px); font-weight:800; letter-spacing:-.5px; }
+  .section-sub { color:var(--text-dim); font-size:17px; margin-top:10px; max-width:620px; }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; margin-top:44px; }
+  .card { position:relative; background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); padding:24px; transition:transform .18s,border-color .18s; }
+  .card:hover { transform:translateY(-3px); border-color:var(--accent); }
+  .card-ico { width:44px; height:44px; display:grid; place-items:center; border-radius:11px; background:rgba(222,34,70,.12); color:var(--accent-hi); margin-bottom:16px; }
+  .card-ico svg { width:24px; height:24px; }
+  .card h3 { font-size:17px; font-weight:700; margin-bottom:8px; }
+  .card p { color:var(--text-dim); font-size:14.5px; }
+  .tag { display:inline-block; margin-top:12px; padding:3px 10px; border-radius:999px; background:rgba(34,200,100,.14); color:var(--success); font-size:12px; font-weight:700; }
+
+  .banner-section { padding:0; }
+  .banner { display:grid; grid-template-columns:1.3fr 1fr; gap:44px; align-items:center; background:linear-gradient(120deg,rgba(222,34,70,.16),rgba(222,34,70,.03) 60%),var(--bg-panel); border:1px solid rgba(222,34,70,.3); border-radius:18px; padding:44px; }
+  .banner-copy .eyebrow { color:var(--accent-hi); }
+  .banner-copy h2 { font-size:clamp(24px,3vw,34px); font-weight:800; letter-spacing:-.5px; margin:10px 0 14px; }
+  .banner-copy p { color:var(--text-dim); font-size:16px; }
+  .banner-list { list-style:none; margin-top:20px; display:flex; flex-direction:column; gap:12px; }
+  .banner-list li { position:relative; padding-left:30px; font-size:15px; }
+  .banner-list li b { color:var(--text); }
+  .banner-list li::before { content:''; position:absolute; left:0; top:3px; width:18px; height:18px; border-radius:6px; background:var(--accent); -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M9 16.2l-3.5-3.5-1.4 1.4L9 19 20 8l-1.4-1.4z'/%3E%3C/svg%3E") center/15px no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M9 16.2l-3.5-3.5-1.4 1.4L9 19 20 8l-1.4-1.4z'/%3E%3C/svg%3E") center/15px no-repeat; }
+  .banner-shot img { width:100%; border-radius:12px; border:1px solid var(--border); background:var(--bg-dark); box-shadow:0 24px 60px rgba(0,0,0,.55); }
+
+  .carousel { position:relative; margin-top:44px; display:flex; align-items:center; gap:14px; }
+  .carousel-viewport { overflow:hidden; flex:1 1 auto; border-radius:var(--radius); }
+  .carousel-track { display:flex; transition:transform .45s cubic-bezier(.4,0,.2,1); }
+  .screen { flex:0 0 100%; display:grid; grid-template-columns:320px 1fr; gap:32px; align-items:center; background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); padding:32px; }
+  .screen-shot { display:flex; justify-content:center; }
+  .screen-shot img { width:auto; max-height:360px; border-radius:10px; border:1px solid var(--border); background:var(--bg-dark); box-shadow:0 18px 44px rgba(0,0,0,.5); }
+  .screen-num { color:var(--accent-hi); font-weight:700; font-size:13px; letter-spacing:.5px; }
+  .screen-copy h3 { font-size:24px; font-weight:800; margin:8px 0 12px; letter-spacing:-.3px; }
+  .screen-copy p { color:var(--text-dim); font-size:16px; }
+  .screen-tags { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+  .screen-tags span { background:var(--bg-dark); border:1px solid var(--border); border-radius:999px; padding:5px 12px; font-size:12.5px; color:var(--text-dim); }
+  .carousel-arrow { flex:0 0 auto; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; cursor:pointer; background:var(--bg-panel); border:1px solid var(--border); color:var(--text); transition:background .15s,border-color .15s; }
+  .carousel-arrow:hover { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .carousel-dots { display:flex; justify-content:center; gap:10px; margin-top:28px; }
+  .carousel-dots button { width:10px; height:10px; border-radius:50%; padding:0; cursor:pointer; background:var(--border); border:none; transition:background .2s,transform .2s; }
+  .carousel-dots button.is-active { background:var(--accent); transform:scale(1.25); }
+
+  .invite-section { padding-top:0; }
+  .invite { display:flex; align-items:center; gap:24px; background:linear-gradient(100deg,rgba(222,34,70,.14),rgba(222,34,70,.04)); border:1px solid rgba(222,34,70,.35); border-radius:var(--radius); padding:28px 32px; }
+  .invite-mascote { width:130px !important; height:auto !important; max-width:130px !important; flex:0 0 auto; object-fit:contain; }
+  .invite-title { font-weight:700; font-size:18px; }
+  .invite-text { color:var(--text-dim); font-size:15px; margin:6px 0 14px; }
+
+  .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:44px; list-style:none; }
+  .step { background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); padding:28px 24px; }
+  .step-num { display:grid; place-items:center; width:38px; height:38px; border-radius:10px; background:var(--accent); color:#fff; font-weight:800; margin-bottom:16px; }
+  .step h3 { font-size:17px; margin-bottom:8px; }
+  .step p { color:var(--text-dim); font-size:14.5px; }
+  code { background:var(--bg-dark); border:1px solid var(--border); border-radius:5px; padding:1px 6px; font-size:13px; color:#ffd0d8; }
+
+  .req-list { list-style:none; margin-top:24px; }
+  .req-list li { display:flex; justify-content:space-between; padding:15px 0; border-bottom:1px solid var(--border); }
+  .req-list span { color:var(--text-dim); }
+  .req-list b { font-weight:700; }
+  .req-list-wide li:last-child { border-bottom:none; }
+
+  .support-form { margin-top:36px; display:flex; flex-direction:column; gap:16px; }
+  .support-form .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .support-form label { display:flex; flex-direction:column; gap:8px; }
+  .support-form label span { font-size:14px; color:var(--text-dim); font-weight:500; }
+  .support-form input, .support-form textarea { background:var(--bg-dark); border:1px solid var(--border); border-radius:9px; padding:12px 14px; color:var(--text); font-family:inherit; font-size:15px; transition:border-color .15s; }
+  .support-form input:focus, .support-form textarea:focus { outline:none; border-color:var(--accent); }
+  .support-form textarea { resize:vertical; }
+  .support-form .btn { align-self:flex-start; }
+
+  .cta-card { background:var(--bg-panel); border:1px solid var(--border); border-radius:var(--radius); padding:36px; text-align:center; }
+  .cta-card h2 { font-size:28px; font-weight:800; margin:14px 0 10px; }
+  .price { display:flex; flex-direction:column; align-items:center; gap:4px; margin:6px 0 22px; }
+  .price-value { font-size:42px; font-weight:800; letter-spacing:-1px; color:var(--text); }
+  .price-note { color:var(--text-dim); font-size:14px; }
+  .cta-perks { list-style:none; margin:22px auto 0; max-width:380px; text-align:left; display:flex; flex-direction:column; gap:10px; }
+  .cta-perks li { position:relative; padding-left:26px; color:var(--text-dim); font-size:14px; }
+  .cta-perks li::before { content:''; position:absolute; left:0; top:6px; width:16px; height:16px; border-radius:50%; background:var(--success); -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M9 16.2l-3.5-3.5-1.4 1.4L9 19 20 8l-1.4-1.4z'/%3E%3C/svg%3E") center/14px no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M9 16.2l-3.5-3.5-1.4 1.4L9 19 20 8l-1.4-1.4z'/%3E%3C/svg%3E") center/14px no-repeat; }
+  .cta-card .btn { margin-top:6px; }
+  .cta-pay { color:var(--text-dim); font-size:13.5px; margin-top:16px; }
+
+  .faq { margin-top:36px; display:flex; flex-direction:column; gap:12px; }
+  .faq details { background:var(--bg-panel); border:1px solid var(--border); border-radius:11px; padding:4px 20px; }
+  .faq summary { cursor:pointer; padding:16px 0; font-weight:600; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+  .faq summary::-webkit-details-marker { display:none; }
+  .faq summary::after { content:'+'; color:var(--accent-hi); font-size:22px; font-weight:400; line-height:1; transition:transform .2s; flex:0 0 auto; }
+  .faq details[open] summary::after { transform:rotate(45deg); }
+  .faq details p { color:var(--text-dim); padding:0 0 18px; font-size:15px; }
+
+  .footer { background:var(--bg-card); border-top:1px solid var(--border); padding:48px 0 28px; }
+  .footer-inner { display:flex; justify-content:space-between; gap:32px; flex-wrap:wrap; }
+  .footer-brand { max-width:360px; }
+  .footer-brand-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .footer-icon { width:36px !important; height:36px !important; max-width:36px !important; object-fit:contain; }
+  .footer-logo { width:auto !important; height:22px !important; max-width:160px !important; opacity:.85; }
+  .footer-brand p { color:var(--text-dim); font-size:14px; }
+  .footer-links { display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start; }
+  .footer-links a { color:var(--text-dim); font-size:14.5px; transition:color .15s; }
+  .footer-links a:hover { color:var(--text); }
+  .footer-copy { text-align:center; color:var(--text-dim); font-size:13px; margin-top:36px; }
+
+  @media (max-width:900px) {
+    .hero-inner { grid-template-columns:1fr; text-align:center; }
+    .hero-copy { order:2; } .hero-art { order:1; }
+    .lead { margin-left:auto; margin-right:auto; }
+    .hero-cta { justify-content:center; }
+    .steps { grid-template-columns:1fr; }
+    .support-form .form-row { grid-template-columns:1fr; }
+    .screen { grid-template-columns:1fr; gap:20px; text-align:center; padding:24px; }
+    .screen-shot img { max-width:260px; margin:0 auto; }
+    .screen-tags { justify-content:center; }
+    .carousel-arrow { position:absolute; top:38%; z-index:3; width:38px; height:38px; background:rgba(14,14,20,.75); }
+    .carousel-prev { left:6px; } .carousel-next { right:6px; } .carousel { gap:0; }
+    .invite { flex-direction:column; text-align:center; }
+    .banner { grid-template-columns:1fr; gap:28px; padding:28px; text-align:center; }
+    .banner-list { text-align:left; max-width:420px; margin-left:auto; margin-right:auto; }
+    .banner-shot img { max-width:300px; margin:0 auto; }
+  }
+  @media (max-width:540px) {
+    .section { padding:60px 0; }
+    .hero { padding:48px 0 56px; }
+    .hero-shot { max-height:440px; }
+    .cta-card { padding:26px 20px; }
+  }
+  </style>
+</head>
+<body>
+
+  <div class="lang-switch" role="group" aria-label="Idioma / Language">
+    <button type="button" data-lang="pt" class="is-active">PT</button>
+    <button type="button" data-lang="en">EN</button>
+  </div>
+
+  <section class="hero" id="top">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <img src="https://www.xuimart.com.br/drawcolor/IMG/drawcolor-icon.png" alt="" class="hero-mark" aria-hidden="true">
+    <div class="wrap hero-inner">
+      <div class="hero-copy">
+        <span class="pill" data-pt="Plugin para Photoshop · v1.0.3" data-en="Photoshop plugin · v1.0.3">Plugin para Photoshop · v1.0.3</span>
+        <h1><span data-pt="A cor certa, " data-en="The right color, ">A cor certa, </span><span class="grad" data-pt="com teoria de verdade" data-en="with real theory">com teoria de verdade</span></h1>
+        <p class="lead" data-pt="Roda de cores, harmonias profissionais, máscara de gamut, misturador e paletas, direto no Photoshop. O painel se adapta ao tamanho do seu dock, sem apertar nada." data-en="Color wheel, pro harmonies, gamut mask, mixer and palettes, right inside Photoshop. The panel adapts to the size of your dock — no fiddling required.">Roda de cores, harmonias profissionais, máscara de gamut, misturador e paletas, direto no Photoshop. O painel se adapta ao tamanho do seu dock, sem apertar nada.</p>
+        <div class="hero-cta">
+          <a class="btn btn-accent" href="https://chk.eduzz.com/6W4GGBDA0Z">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2l1.5 2h9L18 2M5 7h14l-1.2 12.2a2 2 0 01-2 1.8H8.2a2 2 0 01-2-1.8z"/></svg>
+            <span data-pt="Comprar o DrawColor" data-en="Buy DrawColor">Comprar o DrawColor</span>
+          </a>
+          <a class="btn btn-ghost" href="#features" data-pt="Ver funcionalidades" data-en="See features">Ver funcionalidades</a>
+        </div>
+        <p class="hero-note" data-pt="Windows · Adobe Photoshop 2019 ou mais recente" data-en="Windows · Adobe Photoshop 2019 or newer">Windows · Adobe Photoshop 2019 ou mais recente</p>
+      </div>
+      <div class="hero-art">
+        <img src="https://www.xuimart.com.br/drawcolor/IMG/panel-vertical.png" alt="DrawColor panel in Photoshop" class="hero-shot">
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="features">
+    <div class="wrap">
+      <p class="eyebrow" data-pt="Funcionalidades" data-en="Features">Funcionalidades</p>
+      <h2 class="section-title" data-pt="Teoria de cor na ponta do pincel" data-en="Color theory at your fingertips">Teoria de cor na ponta do pincel</h2>
+      <p class="section-sub" data-pt="Ferramentas de cor profissionais, num layout que se molda ao seu espaço." data-en="Pro color tools in a layout that molds to your space.">Ferramentas de cor profissionais, num layout que se molda ao seu espaço.</p>
+
+      <div class="grid">
+        <article class="card">
+          <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <h3 data-pt="Roda RGB e RYB" data-en="RGB and RYB wheel">Roda RGB e RYB</h3>
+          <p data-pt="Roda da luz ou do pintor, com triângulo, quadrado ou disco. Escolha o modelo que combina com o seu jeito de pensar cor." data-en="Light wheel or painter's wheel, with triangle, square or disc selector. Pick the model that matches how you think about color.">Roda da luz ou do pintor, com triângulo, quadrado ou disco. Escolha o modelo que combina com o seu jeito de pensar cor.</p>
+        </article>
+        <article class="card">
+          <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="17" r="2"/><circle cx="19" cy="17" r="2"/><path d="M12 7v4m0 0l-5 4m5-4l5 4"/></svg></div>
+          <h3 data-pt="Harmonias de cor" data-en="Color harmonies">Harmonias de cor</h3>
+          <p data-pt="Complementar, análoga, tríade, tétrade e análoga acentuada. Arraste um marcador e o esquema inteiro acompanha." data-en="Complementary, analogous, triad, tetrad and accented analogous. Drag one marker and the whole scheme follows.">Complementar, análoga, tríade, tétrade e análoga acentuada. Arraste um marcador e o esquema inteiro acompanha.</p>
+        </article>
+        <article class="card">
+          <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 .5-4.5 4 1.5 6-6-3.2L5.5 18.5l1.5-6L2.5 8.5 8.5 8z"/></svg></div>
+          <h3 data-pt="Máscara de gamut" data-en="Gamut mask">Máscara de gamut</h3>
+          <p data-pt="Limite a paleta a uma região do disco e edite os vértices da máscara à mão. Harmonia garantida em cada pincelada." data-en="Limit your palette to a region of the disc and edit the mask vertices by hand. Harmony guaranteed in every stroke.">Limite a paleta a uma região do disco e edite os vértices da máscara à mão. Harmonia garantida em cada pincelada.</p>
+        </article>
+        <article class="card">
+          <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="4" rx="1"/><rect x="3" y="11" width="18" height="4" rx="1"/><rect x="3" y="17" width="18" height="4" rx="1"/></svg></div>
+          <h3 data-pt="Sliders RGB, HSV, LAB, CMYK e B/W" data-en="RGB, HSV, LAB, CMYK and B/W sliders">Sliders RGB, HSV, LAB, CMYK e B/W</h3>
+          <p data-pt="Ajuste fino em cinco modelos. A régua B/W vai do branco ao preto, com grupos de valores para estudar luz e sombra." data-en="Fine tuning across five models. The B/W ramp runs from white to black, with value groups to study light and shadow.">Ajuste fino em cinco modelos. A régua B/W vai do branco ao preto, com grupos de valores para estudar luz e sombra.</p>
+        </article>
+        <article class="card">
+          <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="9" r="4"/><circle cx="16" cy="15" r="4"/></svg></div>
+          <h3 data-pt="Misturador e paletas" data-en="Mixer and palettes">Misturador e paletas</h3>
+          <p data-pt="Misture cores com histórico e salve paletas para reusar depois. O conta-gotas do Godê captura qualquer tom da tela." data-en="Mix colors with history and save palettes to reuse later. The Godê eyedropper grabs any tone on screen.">Misture cores com histórico e salve paletas para reusar depois. O conta-gotas do Godê captura qualquer tom da tela.</p>
+        </article>
+        <article class="card">
+          <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg></div>
+          <h3 data-pt="Layout responsivo" data-en="Responsive layout">Layout responsivo</h3>
+          <p data-pt="Painel estreito empilha; dock largo coloca a roda ao lado dos sliders. As ferramentas vão para as bordas sozinhas." data-en="A narrow panel stacks; a wide dock puts the wheel beside the sliders. Tools spread to the edges on their own.">Painel estreito empilha; dock largo coloca a roda ao lado dos sliders. As ferramentas vão para as bordas sozinhas.</p>
+          <span class="tag" data-pt="Novo v1.0.3" data-en="New v1.0.3">Novo v1.0.3</span>
+        </article>
+        <article class="card">
+          <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z"/></svg></div>
+          <h3 data-pt="Trava de luminosidade" data-en="Luminosity lock">Trava de luminosidade</h3>
+          <p data-pt="Mude o matiz mantendo o valor fixo, e confira a cena em escala de cinza com um clique. Decisões de luz sem distração." data-en="Change the hue while keeping the value fixed, and check the scene in grayscale with one click. Light decisions, no distraction.">Mude o matiz mantendo o valor fixo, e confira a cena em escala de cinza com um clique. Decisões de luz sem distração.</p>
+        </article>
+        <article class="card">
+          <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17V7a2 2 0 012-2h12a2 2 0 012 2v10M4 17h16M9 21h6"/></svg></div>
+          <h3 data-pt="Aviso de atualização" data-en="Update notice">Aviso de atualização</h3>
+          <p data-pt="O painel verifica novas versões e avisa quando sai uma melhoria. Baixe com um clique, feche o aviso quando quiser." data-en="The panel checks for new versions and lets you know when an update ships. Download with one click, dismiss the notice anytime.">O painel verifica novas versões e avisa quando sai uma melhoria. Baixe com um clique, feche o aviso quando quiser.</p>
+        </article>
+        <article class="card">
+          <div class="card-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V5a2 2 0 012-2h2M20 7V5a2 2 0 00-2-2h-2M4 17v2a2 2 0 002 2h2M20 17v2a2 2 0 01-2 2h-2"/></svg></div>
+          <h3 data-pt="Painel destacável" data-en="Detachable panel">Painel destacável</h3>
+          <p data-pt="Separe os controles numa janela flutuante quando quiser mais espaço de tela para a sua arte." data-en="Pop the controls into a floating window whenever you want more screen space for your art.">Separe os controles numa janela flutuante quando quiser mais espaço de tela para a sua arte.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section banner-section">
+    <div class="wrap">
+      <div class="banner">
+        <div class="banner-copy">
+          <p class="eyebrow" data-pt="Destaque · Régua B/W" data-en="Highlight · B/W ramp">Destaque · Régua B/W</p>
+          <h2 data-pt="Controle de valores do jeito que o artista pensa" data-en="Value control the way an artist thinks">Controle de valores do jeito que o artista pensa</h2>
+          <p data-pt="A régua de preto e branco vai do branco puro ao preto puro e deixa você estudar a luz da cena sem a distração da cor. E vai além da régua fixa:" data-en="The black-and-white ramp runs from pure white to pure black, letting you study the light in a scene without the distraction of color. And it goes beyond a fixed ramp:">A régua de preto e branco vai do branco puro ao preto puro e deixa você estudar a luz da cena sem a distração da cor. E vai além da régua fixa:</p>
+          <ul class="banner-list">
+            <li><b data-pt="Crie grupos de valores:" data-en="Create value groups:">Crie grupos de valores:</b> <span data-pt="divida um único tom em vários degraus para separar luz, meio-tom e sombra com precisão." data-en="split a single tone into several steps to separate light, midtone and shadow with precision.">divida um único tom em vários degraus para separar luz, meio-tom e sombra com precisão.</span></li>
+            <li><b data-pt="Aumente ou diminua a quantidade:" data-en="Increase or decrease the amount:">Aumente ou diminua a quantidade:</b> <span data-pt="com os botões + e −, ajuste quantos valores a régua tem, da leitura mais simples à mais detalhada." data-en="with the + and − buttons, set how many values the ramp has, from the simplest read to the most detailed.">com os botões + e −, ajuste quantos valores a régua tem, da leitura mais simples à mais detalhada.</span></li>
+            <li><b data-pt="Desfaça num clique:" data-en="Undo in one click:">Desfaça num clique:</b> <span data-pt="o botão de reset volta a régua aos tons originais quando quiser recomeçar." data-en="the reset button returns the ramp to its original tones whenever you want to start over.">o botão de reset volta a régua aos tons originais quando quiser recomeçar.</span></li>
+          </ul>
+        </div>
+        <div class="banner-shot">
+          <img src="https://www.xuimart.com.br/drawcolor/IMG/tela-valores.png" alt="DrawColor B/W value ramp with value groups">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="screens">
+    <div class="wrap">
+      <p class="eyebrow" data-pt="Veja na prática" data-en="See it in action">Veja na prática</p>
+      <h2 class="section-title" data-pt="Conheça cada tela do painel" data-en="Get to know every panel screen">Conheça cada tela do painel</h2>
+      <p class="section-sub" data-pt="Direto, em português e pensado para artistas." data-en="Simple, bilingual and made for artists.">Direto, em português e pensado para artistas.</p>
+
+      <div class="carousel" id="carousel">
+        <button class="carousel-arrow carousel-prev" id="carPrev" type="button" aria-label="Prev">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="carousel-viewport">
+          <div class="carousel-track" id="carTrack">
+            <article class="screen">
+              <div class="screen-shot"><img src="https://www.xuimart.com.br/drawcolor/IMG/tela-roda.png" alt="DrawColor wheel and sliders"></div>
+              <div class="screen-copy">
+                <span class="screen-num" data-pt="01 / 04 · Roda &amp; Sliders" data-en="01 / 04 · Wheel &amp; Sliders">01 / 04 · Roda &amp; Sliders</span>
+                <h3 data-pt="A cor na palma da mão" data-en="Color in the palm of your hand">A cor na palma da mão</h3>
+                <p data-pt="Gire a roda, escolha o triângulo, quadrado ou disco e ajuste fino nos sliders RGB, HSV, LAB, CMYK ou B/W. A cor segue direto para o Photoshop." data-en="Spin the wheel, pick the triangle, square or disc, and fine-tune with the RGB, HSV, LAB, CMYK or B/W sliders. The color goes straight to Photoshop.">Gire a roda, escolha o triângulo, quadrado ou disco e ajuste fino nos sliders RGB, HSV, LAB, CMYK ou B/W. A cor segue direto para o Photoshop.</p>
+                <div class="screen-tags"><span data-pt="Roda RGB / RYB" data-en="RGB / RYB wheel">Roda RGB / RYB</span><span data-pt="5 modelos de slider" data-en="5 slider models">5 modelos de slider</span><span data-pt="Régua B/W" data-en="B/W ramp">Régua B/W</span></div>
+              </div>
+            </article>
+            <article class="screen">
+              <div class="screen-shot"><img src="https://www.xuimart.com.br/drawcolor/IMG/tela-mixers.png" alt="DrawColor color mixer"></div>
+              <div class="screen-copy">
+                <span class="screen-num" data-pt="02 / 04 · Mixers" data-en="02 / 04 · Mixers">02 / 04 · Mixers</span>
+                <h3 data-pt="Misture tons com controle" data-en="Mix tones with control">Misture tons com controle</h3>
+                <p data-pt="Histórico de cores, blender por saturação ou valor, variações de tom e esquemas de harmonia. Tudo numa aba só, para compor paletas sem sair do fluxo." data-en="Color history, a blender by saturation or value, tone variations and harmony schemes. All in one tab, so you build palettes without leaving your flow.">Histórico de cores, blender por saturação ou valor, variações de tom e esquemas de harmonia. Tudo numa aba só, para compor paletas sem sair do fluxo.</p>
+                <div class="screen-tags"><span data-pt="Histórico" data-en="History">Histórico</span><span data-pt="Blender" data-en="Blender">Blender</span><span data-pt="Shades &amp; tones" data-en="Shades &amp; tones">Shades &amp; tones</span></div>
+              </div>
+            </article>
+            <article class="screen">
+              <div class="screen-shot"><img src="https://www.xuimart.com.br/drawcolor/IMG/tela-paletas.png" alt="DrawColor saved palettes"></div>
+              <div class="screen-copy">
+                <span class="screen-num" data-pt="03 / 04 · Paletas" data-en="03 / 04 · Palettes">03 / 04 · Paletas</span>
+                <h3 data-pt="Salve e reuse suas cores" data-en="Save and reuse your colors">Salve e reuse suas cores</h3>
+                <p data-pt="Guarde as paletas das suas cenas e volte a elas quando quiser. Ideal para manter a identidade de cor de um projeto do começo ao fim." data-en="Store the palettes of your scenes and come back to them whenever you want. Perfect to keep a project's color identity from start to finish.">Guarde as paletas das suas cenas e volte a elas quando quiser. Ideal para manter a identidade de cor de um projeto do começo ao fim.</p>
+                <div class="screen-tags"><span data-pt="Paletas salvas" data-en="Saved palettes">Paletas salvas</span><span data-pt="Reuso rápido" data-en="Quick reuse">Reuso rápido</span></div>
+              </div>
+            </article>
+            <article class="screen">
+              <div class="screen-shot"><img src="https://www.xuimart.com.br/drawcolor/IMG/tela-gode.png" alt="DrawColor paint mixing palette"></div>
+              <div class="screen-copy">
+                <span class="screen-num" data-pt="04 / 04 · Godê" data-en="04 / 04 · Mixing palette">04 / 04 · Godê</span>
+                <h3 data-pt="Misture como numa paleta real" data-en="Mix like on a real palette">Misture como numa paleta real</h3>
+                <p data-pt="Pinte e misture tintas numa paleta digital, com pincel, conta-gotas e controle de tamanho e fluxo. O conta-gotas captura qualquer tom da tela." data-en="Paint and blend inks on a digital palette, with brush, eyedropper and size/flow control. The eyedropper grabs any tone on screen.">Pinte e misture tintas numa paleta digital, com pincel, conta-gotas e controle de tamanho e fluxo. O conta-gotas captura qualquer tom da tela.</p>
+                <div class="screen-tags"><span data-pt="Mistura de tintas" data-en="Ink mixing">Mistura de tintas</span><span data-pt="Conta-gotas" data-en="Eyedropper">Conta-gotas</span><span data-pt="Tamanho &amp; fluxo" data-en="Size &amp; flow">Tamanho &amp; fluxo</span></div>
+              </div>
+            </article>
+          </div>
+        </div>
+        <button class="carousel-arrow carousel-next" id="carNext" type="button" aria-label="Next">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+      <div class="carousel-dots" id="carDots" role="tablist" aria-label="Screens"></div>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="wrap">
+      <p class="eyebrow" data-pt="Como instalar" data-en="How to install">Como instalar</p>
+      <h2 class="section-title" data-pt="Pronto em menos de um minuto" data-en="Ready in under a minute">Pronto em menos de um minuto</h2>
+      <p class="section-sub" data-pt="Da compra à primeira cor sem configuração complicada." data-en="From checkout to your first color, with no complicated setup.">Da compra à primeira cor sem configuração complicada.</p>
+
+      <ol class="steps">
+        <li class="step">
+          <span class="step-num">1</span>
+          <h3 data-pt="Compre e baixe" data-en="Buy and download">Compre e baixe</h3>
+          <p data-pt="Finalize a compra pelo checkout seguro do Eduzz e receba o DrawColor_Setup.exe. Execute: ele detecta sua versão do Photoshop e instala sozinho." data-en="Complete the purchase through Eduzz's secure checkout and get DrawColor_Setup.exe. Run it: it detects your Photoshop version and installs on its own.">Finalize a compra pelo checkout seguro do Eduzz e receba o DrawColor_Setup.exe. Execute: ele detecta sua versão do Photoshop e instala sozinho.</p>
+        </li>
+        <li class="step">
+          <span class="step-num">2</span>
+          <h3 data-pt="Abra o Photoshop" data-en="Open Photoshop">Abra o Photoshop</h3>
+          <p data-pt="Ative em Janela → Extensões → DrawColor. O painel aparece encaixado no seu espaço de trabalho." data-en="Enable it in Window → Extensions → DrawColor. The panel docks right into your workspace.">Ative em Janela → Extensões → DrawColor. O painel aparece encaixado no seu espaço de trabalho.</p>
+        </li>
+        <li class="step">
+          <span class="step-num">3</span>
+          <h3 data-pt="Escolha a cor" data-en="Pick your color">Escolha a cor</h3>
+          <p data-pt="Gire a roda, trave uma harmonia, misture tons. A cor segue direto para o Photoshop enquanto você pinta." data-en="Spin the wheel, lock a harmony, mix tones. The color flows straight to Photoshop while you paint.">Gire a roda, trave uma harmonia, misture tons. A cor segue direto para o Photoshop enquanto você pinta.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap wrap-narrow">
+      <p class="eyebrow" data-pt="Requisitos do sistema" data-en="System requirements">Requisitos do sistema</p>
+      <ul class="req-list req-list-wide">
+        <li><span data-pt="Sistema" data-en="System">Sistema</span><b>Windows 10 / 11</b></li>
+        <li><span>Adobe Photoshop</span><b data-pt="2019 ou mais recente" data-en="2019 or newer">2019 ou mais recente</b></li>
+        <li><span data-pt="Instalador" data-en="Installer">Instalador</span><b data-pt="~240 KB, sem admin" data-en="~240 KB, no admin">~240 KB, sem admin</b></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="buy">
+    <div class="wrap wrap-narrow">
+      <div class="cta-card">
+        <span class="pill" data-pt="Licença única · v1.0.3 para Windows" data-en="One-time license · v1.0.3 for Windows">Licença única · v1.0.3 para Windows</span>
+        <h2 data-pt="Pronto para escolher melhor as cores?" data-en="Ready to choose better colors?">Pronto para escolher melhor as cores?</h2>
+        <p class="price"><span class="price-value" data-pt="R$ 29,90" data-en="$10">R$ 29,90</span><span class="price-note" data-pt="pagamento único · atualizações incluídas" data-en="one-time payment · updates included">pagamento único · atualizações incluídas</span></p>
+        <ul class="cta-perks">
+          <li data-pt="Instalador para Photoshop 2019 ou mais recente" data-en="Installer for Photoshop 2019 or newer">Instalador para Photoshop 2019 ou mais recente</li>
+          <li data-pt="Atualizações avisadas dentro do próprio painel" data-en="Updates announced inside the panel itself">Atualizações avisadas dentro do próprio painel</li>
+          <li data-pt="Suporte por e-mail" data-en="Email support">Suporte por e-mail</li>
+        </ul>
+        <a class="btn btn-accent btn-lg" href="https://chk.eduzz.com/6W4GGBDA0Z">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2l1.5 2h9L18 2M5 7h14l-1.2 12.2a2 2 0 01-2 1.8H8.2a2 2 0 01-2-1.8z"/></svg>
+          <span data-pt="Comprar o DrawColor" data-en="Buy DrawColor">Comprar o DrawColor</span>
+        </a>
+        <p class="cta-pay" data-pt="Pagamento seguro pela Eduzz: Pix, cartão ou boleto." data-en="Secure payment via Eduzz: Pix, card or bank slip.">Pagamento seguro pela Eduzz: Pix, cartão ou boleto.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="support">
+    <div class="wrap wrap-narrow">
+      <p class="eyebrow" data-pt="Suporte" data-en="Support">Suporte</p>
+      <h2 class="section-title" data-pt="Encontrou um problema ou tem uma dúvida?" data-en="Found a problem or have a question?">Encontrou um problema ou tem uma dúvida?</h2>
+      <p class="section-sub" data-pt="Descreva abaixo e, se puder, mande um link de screenshot. Respondo o mais rápido que posso." data-en="Describe it below and, if you can, add a screenshot link. I reply as fast as I can.">Descreva abaixo e, se puder, mande um link de screenshot. Respondo o mais rápido que posso.</p>
+
+      <form class="support-form" action="https://formsubmit.co/drawcolorsuporte@xuimart.com.br" method="POST">
+        <input type="hidden" name="_subject" value="Suporte DrawColor">
+        <input type="hidden" name="_captcha" value="false">
+        <input type="hidden" name="_template" value="table">
+        <div class="form-row">
+          <label>
+            <span data-pt="Seu e-mail" data-en="Your email">Seu e-mail</span>
+            <input type="email" name="email" required placeholder="voce@email.com" data-ph-pt="voce@email.com" data-ph-en="you@email.com">
+          </label>
+          <label>
+            <span data-pt="Assunto" data-en="Subject">Assunto</span>
+            <input type="text" name="assunto" placeholder="Ex: instalação, bug, dúvida" data-ph-pt="Ex: instalação, bug, dúvida" data-ph-en="e.g. install, bug, question">
+          </label>
+        </div>
+        <label>
+          <span data-pt="Mensagem" data-en="Message">Mensagem</span>
+          <textarea name="mensagem" rows="5" required placeholder="Conte o que aconteceu, com o máximo de detalhes." data-ph-pt="Conte o que aconteceu, com o máximo de detalhes." data-ph-en="Tell me what happened, in as much detail as possible."></textarea>
+        </label>
+        <button type="submit" class="btn btn-accent" data-pt="Enviar mensagem" data-en="Send message">Enviar mensagem</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="faq">
+    <div class="wrap wrap-narrow">
+      <p class="eyebrow" data-pt="Perguntas frequentes" data-en="FAQ">Perguntas frequentes</p>
+      <h2 class="section-title" data-pt="Dúvidas comuns" data-en="Common questions">Dúvidas comuns</h2>
+
+      <div class="faq">
+        <details>
+          <summary data-pt="Quanto custa e como funciona a licença?" data-en="How much is it and how does the license work?">Quanto custa e como funciona a licença?</summary>
+          <p data-pt="É uma licença única de R$ 29,90: você paga uma vez e usa para sempre, sem assinatura. As atualizações futuras estão incluídas, sem custo extra." data-en="It's a one-time license of $10: pay once and use forever, no subscription. Future updates are included at no extra cost.">É uma licença única de R$ 29,90: você paga uma vez e usa para sempre, sem assinatura. As atualizações futuras estão incluídas, sem custo extra.</p>
+        </details>
+        <details>
+          <summary data-pt="Como recebo o plugin depois de comprar?" data-en="How do I get the plugin after buying?">Como recebo o plugin depois de comprar?</summary>
+          <p data-pt="O pagamento é processado pelo Eduzz, com checkout seguro. Após a confirmação, você recebe o acesso para baixar o instalador DrawColor_Setup.exe." data-en="Payment is handled by Eduzz, with a secure checkout. Once confirmed, you get access to download the DrawColor_Setup.exe installer.">O pagamento é processado pelo Eduzz, com checkout seguro. Após a confirmação, você recebe o acesso para baixar o instalador DrawColor_Setup.exe.</p>
+        </details>
+        <details>
+          <summary data-pt="Com quais versões do Photoshop funciona?" data-en="Which Photoshop versions does it support?">Com quais versões do Photoshop funciona?</summary>
+          <p data-pt="Compatível com Adobe Photoshop de 2019 a 2026, no Windows 10 e 11. O instalador detecta a versão instalada automaticamente. MacOS não é suportado no momento." data-en="Compatible with Adobe Photoshop from 2019 to 2026, on Windows 10 and 11. The installer detects your version automatically. macOS is not supported at the moment.">Compatível com Adobe Photoshop de 2019 a 2026, no Windows 10 e 11. O instalador detecta a versão instalada automaticamente. MacOS não é suportado no momento.</p>
+        </details>
+        <details>
+          <summary data-pt="Preciso configurar alguma coisa depois de instalar?" data-en="Do I need to set anything up after installing?">Preciso configurar alguma coisa depois de instalar?</summary>
+          <p data-pt="Não. Instale, abra o Photoshop e ative o painel em Janela → Extensões → DrawColor. Ele já vem pronto para usar." data-en="No. Install it, open Photoshop and enable the panel in Window → Extensions → DrawColor. It's ready to use out of the box.">Não. Instale, abra o Photoshop e ative o painel em Janela → Extensões → DrawColor. Ele já vem pronto para usar.</p>
+        </details>
+        <details>
+          <summary data-pt="As atualizações são pagas à parte?" data-en="Are updates charged separately?">As atualizações são pagas à parte?</summary>
+          <p data-pt="Não. O painel verifica novas versões ao abrir e avisa quando há uma disponível. Com a sua licença, você baixa as atualizações sem pagar de novo." data-en="No. The panel checks for new versions when it opens and lets you know when one is available. With your license, you download updates without paying again.">Não. O painel verifica novas versões ao abrir e avisa quando há uma disponível. Com a sua licença, você baixa as atualizações sem pagar de novo.</p>
+        </details>
+        <details>
+          <summary data-pt="Que recursos de cor o DrawColor oferece?" data-en="What color features does DrawColor offer?">Que recursos de cor o DrawColor oferece?</summary>
+          <p data-pt="Roda RGB e RYB, harmonias com marcadores arrastáveis, máscara de gamut, trava de matiz, misturador com histórico e paletas. Tudo com um layout responsivo que se adapta ao tamanho do seu dock." data-en="RGB and RYB wheel, harmonies with draggable markers, gamut mask, hue lock, mixer with history and palettes. All with a responsive layout that adapts to your dock size.">Roda RGB e RYB, harmonias com marcadores arrastáveis, máscara de gamut, trava de matiz, misturador com histórico e paletas. Tudo com um layout responsivo que se adapta ao tamanho do seu dock.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="section invite-section">
+    <div class="wrap wrap-narrow">
+      <div class="invite">
+        <img loading="lazy" decoding="async" src="https://xuimart.com.br/wp-content/uploads/2026/07/xuimassuntoartetransparente.png" alt="Xuimzinho, mascote da XuimArt" class="invite-mascote" onerror="this.style.display='none'">
+        <div class="invite-copy">
+          <p class="invite-title" data-pt="Ficou com alguma dúvida antes de comprar? 👀" data-en="Still have a question before buying? 👀">Ficou com alguma dúvida antes de comprar? 👀</p>
+          <p class="invite-text" data-pt="Me manda uma mensagem pelo formulário de suporte. Eu mesmo respondo! ♥" data-en="Send me a message through the support form. I answer it myself! ♥">Me manda uma mensagem pelo formulário de suporte. Eu mesmo respondo! ♥</p>
+          <a class="btn btn-ghost btn-sm" href="#support" data-pt="Falar comigo" data-en="Talk to me">Falar comigo</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      var KEY = 'drawcolor-lang';
+      function detect() {
+        try { var s = localStorage.getItem(KEY); if (s === 'pt' || s === 'en') return s; } catch (e) {}
+        return (navigator.language || 'pt').toLowerCase().indexOf('pt') === 0 ? 'pt' : 'en';
+      }
+      function apply(lang) {
+        document.documentElement.lang = (lang === 'pt') ? 'pt-BR' : 'en';
+        var nodes = document.querySelectorAll('[data-' + lang + ']');
+        for (var i = 0; i < nodes.length; i++) {
+          var v = nodes[i].getAttribute('data-' + lang);
+          if (v !== null) nodes[i].textContent = v;
+        }
+        var ph = document.querySelectorAll('[data-ph-' + lang + ']');
+        for (var j = 0; j < ph.length; j++) ph[j].setAttribute('placeholder', ph[j].getAttribute('data-ph-' + lang));
+        var btns = document.querySelectorAll('.lang-switch button');
+        for (var k = 0; k < btns.length; k++) btns[k].classList.toggle('is-active', btns[k].getAttribute('data-lang') === lang);
+        try { localStorage.setItem(KEY, lang); } catch (e) {}
+      }
+      var sw = document.querySelectorAll('.lang-switch button');
+      for (var i = 0; i < sw.length; i++) sw[i].addEventListener('click', function () { apply(this.getAttribute('data-lang')); });
+      apply(detect());
+    })();
+
+    (function () {
+      var track = document.getElementById('carTrack');
+      var dotsBox = document.getElementById('carDots');
+      if (!track || !dotsBox) return;
+      var total = track.children.length, index = 0, timer = null;
+      for (var i = 0; i < total; i++) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.setAttribute('aria-label', 'Slide ' + (i + 1));
+        (function (n) { b.addEventListener('click', function () { go(n, true); }); })(i);
+        dotsBox.appendChild(b);
+      }
+      var dots = dotsBox.children;
+      function render() {
+        track.style.transform = 'translateX(' + (-index * 100) + '%)';
+        for (var i = 0; i < dots.length; i++) dots[i].classList.toggle('is-active', i === index);
+      }
+      function go(n, stop) { index = (n + total) % total; render(); if (stop) restart(); }
+      function next() { go(index + 1); }
+      function prev() { go(index - 1); }
+      function restart() { if (timer) clearInterval(timer); timer = setInterval(next, 6000); }
+      var bp = document.getElementById('carPrev'), bn = document.getElementById('carNext');
+      if (bp) bp.addEventListener('click', function () { prev(); restart(); });
+      if (bn) bn.addEventListener('click', function () { next(); restart(); });
+      var x0 = null, vp = track.parentElement;
+      vp.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+      vp.addEventListener('touchend', function (e) {
+        if (x0 === null) return;
+        var dx = e.changedTouches[0].clientX - x0;
+        if (Math.abs(dx) > 40) { dx < 0 ? next() : prev(); restart(); }
+        x0 = null;
+      });
+      var car = document.getElementById('carousel');
+      if (car) { car.addEventListener('mouseenter', function () { if (timer) clearInterval(timer); }); car.addEventListener('mouseleave', restart); }
+      render(); restart();
+    })();
+  </script>
+</body>
+</html>

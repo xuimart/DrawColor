@@ -12,12 +12,12 @@
 -->
 <ExtensionManifest Version="6.0"
                    ExtensionBundleId="com.drawcolor.colorwheel"
-                   ExtensionBundleVersion="1.0.3"
+                   ExtensionBundleVersion="1.0.4"
                    ExtensionBundleName="DrawColor Wheel">
 
   <ExtensionList>
-    <Extension Id="com.drawcolor.colorwheel.panel" Version="1.0.3" />
-    <Extension Id="com.drawcolor.colorwheel.tools" Version="1.0.3" />
+    <Extension Id="com.drawcolor.colorwheel.panel" Version="1.0.4" />
+    <Extension Id="com.drawcolor.colorwheel.tools" Version="1.0.4" />
   </ExtensionList>
 
   <ExecutionEnvironment>

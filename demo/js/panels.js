@@ -7,6 +7,7 @@ window.Panels = (function () {
 
   const C = window.Color;
   const S = window.AppState;
+  const I18N = window.I18N;
 
   /* ================= Definição dos modos de slider (Requisito 4.1) ================= */
 
@@ -186,6 +187,11 @@ window.Panels = (function () {
 
     const mode = MODES[S.state.sliderMode];
 
+    // Marca o painel quando o modo tem 4 canais (CMYK). Substitui o seletor
+    // CSS `:has()`, que o CEF antigo do Photoshop (ex.: 22.5.6) não entende.
+    const panelEl = document.querySelector('.panel');
+    if (panelEl) panelEl.classList.toggle('has-4ch', mode.channels.length >= 4);
+
     mode.channels.forEach((ch) => {
       const row = document.createElement('div');
       row.className = 'slider-row';
@@ -198,7 +204,7 @@ window.Panels = (function () {
       track.className = 'track';
       track.tabIndex = 0;
       track.setAttribute('role', 'slider');
-      track.setAttribute('aria-label', `Canal ${ch.label}`);
+      track.setAttribute('aria-label', I18N.t('slider.channel', { ch: ch.label }));
       track.setAttribute('aria-valuemin', String(ch.min));
       track.setAttribute('aria-valuemax', String(ch.max));
 
@@ -213,7 +219,7 @@ window.Panels = (function () {
       const input = document.createElement('input');
       input.type = 'text';
       input.className = 'num-field';
-      input.setAttribute('aria-label', `Valor do canal ${ch.label}`);
+      input.setAttribute('aria-label', I18N.t('slider.channelValue', { ch: ch.label }));
 
       row.append(label, track, input);
       host.appendChild(row);
@@ -461,8 +467,8 @@ window.Panels = (function () {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.style.background = `rgb(${t.r},${t.g},${t.b})`;
-        btn.title = `Valor ${t.level}%`;
-        btn.setAttribute('aria-label', `Aplicar valor ${t.level}%`);
+        btn.title = I18N.t('bw.value.title', { n: t.level });
+        btn.setAttribute('aria-label', I18N.t('bw.value.aria', { n: t.level }));
         if (j === closest) btn.classList.add('is-current');
         btn.addEventListener('click', () => {
           selectBwCell(i);
@@ -1164,6 +1170,17 @@ window.Panels = (function () {
     }
   }
 
+  /**
+   * Reaplica os textos que o JS monta nos sliders e na rampa B/W quando o
+   * idioma muda. Os textos estáticos ficam com o I18N.applyStatic; aqui só o
+   * que é gerado em runtime (aria-labels de canal, títulos da rampa).
+   */
+  function relabel() {
+    buildSliders();
+    refreshBwRamp();
+    refreshLimit();
+  }
+
   function init() {
     buildModeButtons();
     buildSliders();
@@ -1189,7 +1206,7 @@ window.Panels = (function () {
   }
 
   return {
-    init, MODES, MODE_ORDER, adjustFloatingHeight, measureBodyHeight,
+    init, relabel, MODES, MODE_ORDER, adjustFloatingHeight, measureBodyHeight,
     // expostos para teste: o gesto de editar um canal, a decisão de descartar
     // o triplo guardado, o mapeamento de posição do trilho para valor e a
     // amostragem das barras do mixer

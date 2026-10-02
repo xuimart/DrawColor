@@ -9,14 +9,18 @@ window.Docking = (function () {
   'use strict';
 
   const STORAGE_KEY = 'colorWheelPlugin.docking.v1';
+  const I18N = window.I18N;
 
-  // Abas que podem ser separadas, com o título da janela
+  // Abas que podem ser separadas. O título da janela vem do i18n (mesma chave
+  // da aba), para acompanhar o idioma.
   const PANES = {
-    paneSliders:  { tab: 'tabSliders',  title: 'Sliders' },
-    paneMixers:   { tab: 'tabMixers',   title: 'Mixers' },
-    panePalettes: { tab: 'tabPalettes', title: 'Paletas' },
-    paneGode:     { tab: 'tabGode',     title: 'Godê' }
+    paneSliders:  { tab: 'tabSliders',  i18n: 'tab.sliders' },
+    paneMixers:   { tab: 'tabMixers',   i18n: 'tab.mixers' },
+    panePalettes: { tab: 'tabPalettes', i18n: 'tab.palettes' },
+    paneGode:     { tab: 'tabGode',     i18n: 'tab.gode' }
   };
+
+  function paneTitle(id) { return I18N.t(PANES[id].i18n); }
 
   const floating = new Map();     // paneId -> { win, placeholder, anchor }
   let positions = {};
@@ -81,12 +85,12 @@ window.Docking = (function () {
     const placeholder = document.createElement('p');
     placeholder.className = 'pane detached-note';
     placeholder.dataset.for = paneId;
-    placeholder.textContent = `${PANES[paneId].title} está numa janela separada.`;
+    placeholder.textContent = I18N.t('dock.inWindow', { title: paneTitle(paneId) });
 
     const dockBack = document.createElement('button');
     dockBack.type = 'button';
     dockBack.className = 'pal-btn';
-    dockBack.textContent = 'Trazer de volta';
+    dockBack.textContent = I18N.t('dock.bringBack');
     dockBack.addEventListener('click', () => dock(paneId));
     placeholder.appendChild(document.createElement('br'));
     placeholder.appendChild(dockBack);
@@ -112,20 +116,20 @@ window.Docking = (function () {
     const win = document.createElement('section');
     win.className = 'float-window';
     win.setAttribute('role', 'dialog');
-    win.setAttribute('aria-label', PANES[paneId].title);
+    win.setAttribute('aria-label', paneTitle(paneId));
 
     const bar = document.createElement('header');
     bar.className = 'float-bar';
 
     const title = document.createElement('span');
     title.className = 'float-title';
-    title.textContent = PANES[paneId].title;
+    title.textContent = paneTitle(paneId);
 
     const dockBtn = document.createElement('button');
     dockBtn.type = 'button';
     dockBtn.className = 'float-dock';
-    dockBtn.title = 'Reencaixar no painel';
-    dockBtn.setAttribute('aria-label', 'Reencaixar no painel');
+    dockBtn.title = I18N.t('dock.redock.title');
+    dockBtn.setAttribute('aria-label', I18N.t('dock.redock.title'));
     dockBtn.textContent = '⤡';
     dockBtn.addEventListener('click', () => dock(paneId));
 
@@ -400,8 +404,8 @@ window.Docking = (function () {
     const canDetach = paneId && !floating.has(paneId);
     btn.disabled = !canDetach;
     btn.title = canDetach
-      ? `Separar ${PANES[paneId].title} em janela`
-      : 'Esta aba já está separada';
+      ? I18N.t('dock.detachPane', { title: paneTitle(paneId) })
+      : I18N.t('dock.alreadyDetached');
   }
 
   /**
@@ -442,5 +446,22 @@ window.Docking = (function () {
     syncDetachButton();
   }
 
-  return { init, detach, dock, isVisible, reflow, openToolsWindow, canOpenToolsWindow };
+  /** Reaplica os títulos das janelas abertas e o botão de separar ao trocar idioma. */
+  function relabel() {
+    floating.forEach(function (entry, id) {
+      var t = paneTitle(id);
+      var titleEl = entry.win && entry.win.querySelector('.float-title');
+      if (titleEl) titleEl.textContent = t;
+      if (entry.win) entry.win.setAttribute('aria-label', t);
+      if (entry.placeholder) {
+        var txt = entry.placeholder.childNodes[0];
+        if (txt) txt.textContent = I18N.t('dock.inWindow', { title: t });
+        var back = entry.placeholder.querySelector('button');
+        if (back) back.textContent = I18N.t('dock.bringBack');
+      }
+    });
+    syncDetachButton();
+  }
+
+  return { init, detach, dock, isVisible, reflow, openToolsWindow, canOpenToolsWindow, relabel };
 })();
