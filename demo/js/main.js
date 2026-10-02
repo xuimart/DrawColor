@@ -6,7 +6,7 @@
   'use strict';
 
   /** Versão local do plugin — atualizada a cada release. */
-  const DRAWCOLOR_VERSION = '1.0.4';
+  const DRAWCOLOR_VERSION = '1.0.5';
 
   /**
    * De onde vem o aviso de atualização. É um version.json no servidor da
@@ -756,36 +756,55 @@
    * Initializes all interactive modules (wheel, panels, tabs, etc.).
    * Should only be called when the license status allows it.
    */
+  /**
+   * Executa um passo de init isolando falhas.
+   *
+   * Em CEF antigo (versões antigas do Photoshop) uma única exceção num passo
+   * derrubava TODO o boot, inclusive o L.init() que escreve a escala (--scale)
+   * no painel. Sem a escala, o painel aparecia em tamanho 1 — tudo gigante e
+   * amontoado. Isolando cada passo, uma falha pontual não impede os demais, e
+   * acima de tudo não impede a escala de ser aplicada.
+   */
+  function safe(label, fn) {
+    try {
+      fn();
+    } catch (e) {
+      if (window.console && console.error) console.error('[DrawColor] falha em ' + label + ':', e);
+    }
+  }
+
   function initInteractive() {
     if (interactiveInitDone) return;
     interactiveInitDone = true;
 
-    initSwatches();
-    initMenu();
-    initShape();
-    initLumLock();
-    initValueCheck();
-    initGamut();
-    initHarmonyEdit();
-    initValueBar();
-    initWheelSpace();
-    initRotation();
-    initTabs();
-    initHistory();
-    buildArc();
+    // A escala do painel vem antes de tudo: é o que faz o layout caber. Fica
+    // protegida e primeiro na ordem para que nenhum outro passo possa impedi-la.
+    safe('LayoutStore.init', function () { window.LayoutStore.init(); });
+    safe('LAYOUT.init', function () { L.init(); });
 
-    // Perfil de layout: carrega âncoras antes de aplicar posições
-    window.LayoutStore.init();
+    safe('initSwatches', initSwatches);
+    safe('initMenu', initMenu);
+    safe('initShape', initShape);
+    safe('initLumLock', initLumLock);
+    safe('initValueCheck', initValueCheck);
+    safe('initGamut', initGamut);
+    safe('initHarmonyEdit', initHarmonyEdit);
+    safe('initValueBar', initValueBar);
+    safe('initWheelSpace', initWheelSpace);
+    safe('initRotation', initRotation);
+    safe('initTabs', initTabs);
+    safe('initHistory', initHistory);
+    safe('buildArc', buildArc);
 
-    // Escala e âncoras: layout.js observa o redimensionamento por conta própria
-    L.init();
+    // Reaplica o layout agora que o arco e os controles existem.
+    safe('LAYOUT.applyLayout', function () { L.applyLayout(); });
 
-    W.init();
-    window.Panels.init();
-    window.Palettes.init();
-    window.Gode.init();
+    safe('Wheel.init', function () { W.init(); });
+    safe('Panels.init', function () { window.Panels.init(); });
+    safe('Palettes.init', function () { window.Palettes.init(); });
+    safe('Gode.init', function () { window.Gode.init(); });
     // Depois dos painéis: o docking move nós já montados
-    window.Docking.init();
+    safe('Docking.init', function () { window.Docking.init(); });
 
     // Modo de organização (⊞) desativado: o layout responsivo já distribui as
     // ferramentas sozinho e o botão não é mais necessário. layout-editor.js
@@ -812,7 +831,7 @@
     };
 
     S.subscribe(refreshChrome);
-    refreshChrome();
+    safe('refreshChrome', refreshChrome);
 
     // Trocar o idioma reaplica os textos estáticos (via I18N) e repinta tudo
     // que é montado em JS: arco de harmonias/formatos, status, abas, etc.
@@ -825,7 +844,7 @@
     });
 
     // Ponte com o Photoshop: no navegador isso é um no-op.
-    if (window.PSBridge) window.PSBridge.init();
+    safe('PSBridge.init', function () { if (window.PSBridge) window.PSBridge.init(); });
 
     /**
      * Esconde a barra de status no Photoshop — é debug de demo, não serve ao
@@ -849,13 +868,13 @@
 
     // Ponte com a outra janela da extensão (janela Modeless do CEP).
     // Fora do CEP também é no-op.
-    if (window.PanelSync) window.PanelSync.init();
+    safe('PanelSync.init', function () { if (window.PanelSync) window.PanelSync.init(); });
 
     // Mostra a versão atual e liga o botão de verificação manual do menu.
-    initUpdateUI();
+    safe('initUpdateUI', initUpdateUI);
 
     // Verifica se há atualização disponível no GitHub (uma vez por sessão).
-    checkForUpdate(false);
+    safe('checkForUpdate', function () { checkForUpdate(false); });
   }
 
   /* ---------------- License status handling ---------------- */
@@ -1143,7 +1162,12 @@
   function boot() {
     // Idioma antes de tudo: aplica os textos estáticos marcados no HTML e fixa
     // o idioma detectado (localStorage/navegador) para o `t()` dos módulos.
-    if (window.I18N && window.I18N.init) window.I18N.init();
+    // Protegido: se o i18n falhar num CEF antigo, o resto do boot segue.
+    try {
+      if (window.I18N && window.I18N.init) window.I18N.init();
+    } catch (e) {
+      if (window.console && console.error) console.error('[DrawColor] falha no I18N.init:', e);
+    }
     if (window.Platform && window.Platform.ready) {
       window.Platform.ready().then(init, init);
     } else {

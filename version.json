@@ -1,5 +1,5 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "downloadUrl": "https://github.com/xuimart/DrawColor/releases/latest/download/DrawColor_Setup.exe",
-  "changelog": "Idioma Portugues/Ingles no menu e correcao de compatibilidade com versoes antigas do Photoshop"
+  "changelog": "Correcao de compatibilidade: o painel agora carrega corretamente em versoes antigas do Photoshop. Idioma Portugues/Ingles no menu."
 }
