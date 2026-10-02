@@ -14,10 +14,16 @@
   <div class="panel" id="panel">
 
     <!-- Banner de atualização: sobreposto no topo, aparece só quando há versão
-         nova (preenchido por showUpdateBanner). Clicar abre o download. -->
-    <div class="update-banner" id="updateBanner" role="button" tabindex="0"
-         hidden title="Clique para baixar a nova versão">
-      <span id="updateBannerText">Nova versão disponível — clique para baixar</span>
+         nova (preenchido por showUpdateBanner). Clicar no texto abre o download;
+         o X fecha o aviso. São dois botões irmãos: um botão dentro de outro
+         quebraria o teclado e o leitor de tela. -->
+    <div class="update-banner" id="updateBanner" role="status" hidden>
+      <button type="button" class="update-banner-link" id="updateBannerLink"
+              title="Clique para baixar a nova versão">
+        <span id="updateBannerText">Nova versão disponível — clique para baixar</span>
+      </button>
+      <button type="button" class="update-banner-close" id="updateBannerClose"
+              title="Fechar" aria-label="Fechar aviso de atualização">×</button>
     </div>
 
     <!-- ================= CABEÇALHO / MENU ================= -->

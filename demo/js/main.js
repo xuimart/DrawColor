@@ -929,16 +929,29 @@
     var btn = document.getElementById('checkUpdateBtn');
     if (btn) btn.addEventListener('click', function () { checkForUpdate(true); });
 
-    // O banner é role="button": Enter e Espaço disparam o clique, como um botão.
-    var banner = document.getElementById('updateBanner');
-    if (banner) {
-      banner.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          if (typeof banner.onclick === 'function') banner.onclick();
+    // O X fecha o aviso e lembra a versão dispensada: o banner automático não
+    // volta para ela nas próximas aberturas. "Verificar atualização" no menu
+    // continua mostrando, porque ali o usuário pediu.
+    var close = document.getElementById('updateBannerClose');
+    if (close) {
+      close.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var banner = document.getElementById('updateBanner');
+        if (!banner) return;
+        banner.hidden = true;
+        var v = banner.getAttribute('data-version');
+        if (v) {
+          try { localStorage.setItem(UPDATE_DISMISSED_KEY, v); } catch (err) { /* sem storage */ }
         }
       });
     }
+  }
+
+  /** Versão cujo aviso o usuário fechou no X (localStorage). */
+  var UPDATE_DISMISSED_KEY = 'drawcolor-update-dismissed';
+
+  function dismissedVersion() {
+    try { return localStorage.getItem(UPDATE_DISMISSED_KEY) || ''; } catch (e) { return ''; }
   }
 
   /**
@@ -968,7 +981,10 @@
           if (!data || !data.version) throw new Error('version.json sem campo version');
 
           var nova = isNewerVersion(data.version, DRAWCOLOR_VERSION);
-          if (nova) showUpdateBanner(data);
+          // No automático, respeita o X: a mesma versão não volta a aparecer.
+          // Uma versão mais nova que a dispensada aparece normalmente.
+          var dispensada = !manual && dismissedVersion() === String(data.version);
+          if (nova && !dispensada) showUpdateBanner(data);
 
           if (manual) {
             setStatus(nova
@@ -1078,7 +1094,10 @@
     var url = data.downloadUrl ||
       'https://github.com/xuimart/DrawColor/releases/latest';
 
-    banner.onclick = function () {
+    banner.setAttribute('data-version', String(data.version));
+
+    var link = document.getElementById('updateBannerLink') || banner;
+    link.onclick = function () {
       try {
         if (window.cep && window.cep.util && window.cep.util.openURLInDefaultBrowser) {
           window.cep.util.openURLInDefaultBrowser(url);
