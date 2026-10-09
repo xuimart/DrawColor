@@ -654,7 +654,8 @@ window.Wheel = (function () {
 
     ctx.beginPath();
     ctx.arc(CX, CY, INNER_R, 0, Math.PI * 2);
-    ctx.fillStyle = '#2b2b2b';
+    // Fundo do miolo segue o tema (Theme.js troca a cor e pede novo render).
+    ctx.fillStyle = (window.Theme && window.Theme.holeColor && window.Theme.holeColor()) || '#2b2b2b';
     ctx.fill();
 
     // O anel é desenhado sem rotação e rotacionado na composição,
@@ -1028,6 +1029,17 @@ window.Wheel = (function () {
   function onPointerMove(evt) {
     const p = toCanvasCoords(evt);
 
+    /**
+     * Arrasto órfão: o botão já foi solto mas o pointerup não chegou (o foco
+     * foi para o Photoshop no meio do gesto, por exemplo). Sem isto o simples
+     * passar do mouse sobre a roda continuava escolhendo cor e regravando no
+     * Photoshop, por cima do que o conta-gotas tinha acabado de amostrar.
+     */
+    if (dragMode && evt.pointerType === 'mouse' && evt.buttons === 0) {
+      onPointerUp(evt);
+      return;
+    }
+
     if (!dragMode) { updateMaskCursor(p, evt); return; }
 
     if (dragMode === 'ring') applyRing(p);
@@ -1130,20 +1142,25 @@ window.Wheel = (function () {
   }
 
   // Ícones das formas do seletor, para os botões do trilho esquerdo
+  /**
+   * Os ícones de forma e de máscara nasceram para um canvas de 22px. As
+   * medidas fixas passam a ser proporcionais (`k = w / 22`), assim o mesmo
+   * desenho serve ao canvas maior, mais nítido, dos popouts.
+   */
   function drawShapeIcon(cv, kind) {
     const c = cv.getContext('2d');
-    const w = cv.width, cx = w / 2, cy = w / 2, r = w / 2 - 2;
+    const w = cv.width, k = w / 22, cx = w / 2, cy = w / 2, r = w / 2 - 2 * k;
 
     c.clearRect(0, 0, w, w);
     c.beginPath();
     c.arc(cx, cy, r, 0, Math.PI * 2);
     c.strokeStyle = '#9a9a9a';
-    c.lineWidth = 1.5;
+    c.lineWidth = 1.5 * k;
     c.stroke();
 
     c.fillStyle = '#d8d8d8';
     if (kind === 'triangle') {
-      const tr = r - 3;
+      const tr = r - 3 * k;
       c.beginPath();
       [0, 120, 240].forEach((angle, i) => {
         const a = angle * DEG;
@@ -1153,11 +1170,11 @@ window.Wheel = (function () {
       c.closePath();
       c.fill();
     } else if (kind === 'square') {
-      const half = (r - 2) / Math.SQRT2;
+      const half = (r - 2 * k) / Math.SQRT2;
       c.fillRect(cx - half, cy - half, half * 2, half * 2);
     } else {
       c.beginPath();
-      c.arc(cx, cy, r - 3, 0, Math.PI * 2);
+      c.arc(cx, cy, r - 3 * k, 0, Math.PI * 2);
       c.fill();
     }
   }
@@ -1268,13 +1285,13 @@ window.Wheel = (function () {
   // Ícone do gamut mask: elipse inclinada dentro do disco
   function drawGamutIcon(cv, active) {
     const c = cv.getContext('2d');
-    const w = cv.width, cx = w / 2, cy = w / 2, r = w / 2 - 2;
+    const w = cv.width, k = w / 22, cx = w / 2, cy = w / 2, r = w / 2 - 2 * k;
 
     c.clearRect(0, 0, w, w);
     c.beginPath();
     c.arc(cx, cy, r, 0, Math.PI * 2);
     c.strokeStyle = active ? '#e8e8e8' : '#9a9a9a';
-    c.lineWidth = 1.4;
+    c.lineWidth = 1.4 * k;
     c.stroke();
 
     c.save();
@@ -1285,7 +1302,7 @@ window.Wheel = (function () {
     c.fillStyle = active ? 'rgba(224,59,48,.75)' : 'rgba(180,180,180,.5)';
     c.fill();
     c.strokeStyle = active ? '#e03b30' : '#9a9a9a';
-    c.lineWidth = 1.2;
+    c.lineWidth = 1.2 * k;
     c.stroke();
     c.restore();
   }
@@ -1461,7 +1478,12 @@ window.Wheel = (function () {
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerUp);
+    // Captura perdida (janela perdeu o foco no meio do arrasto) encerra o gesto.
+    canvas.addEventListener('lostpointercapture', onPointerUp);
     canvas.addEventListener('dblclick', onDoubleClick);
+
+    // Troca de tema muda a cor do miolo da roda.
+    if (window.Theme && window.Theme.onChange) window.Theme.onChange(() => requestRender());
 
     S.subscribe((st, reason) => {
       if (reason === 'shape' || reason === 'rotation' || reason === 'gamut') svCacheKey = null;

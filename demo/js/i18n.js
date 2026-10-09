@@ -107,6 +107,22 @@ window.I18N = (function () {
     /* ---- idioma ---- */
     'menu.language': { pt: 'Idioma', en: 'Language' },
 
+    /* ---- tema ---- */
+    'menu.theme': { pt: 'Tema', en: 'Theme' },
+    'theme.base': { pt: 'Fundo', en: 'Background' },
+    'theme.accent': { pt: 'Destaque', en: 'Accent' },
+    'theme.follow': { pt: 'Acompanhar o tema do Photoshop', en: 'Follow Photoshop theme' },
+    'theme.base.xuimart': { pt: 'Xuimart (azul escuro)', en: 'Xuimart (dark blue)' },
+    'theme.base.graphite': { pt: 'Grafite', en: 'Graphite' },
+    'theme.base.black': { pt: 'Preto', en: 'Black' },
+    'theme.base.gray': { pt: 'Cinza', en: 'Gray' },
+    'theme.base.light': { pt: 'Claro', en: 'Light' },
+    'theme.accent.red': { pt: 'Vermelho Xuimart', en: 'Xuimart red' },
+    'theme.accent.blue': { pt: 'Azul', en: 'Blue' },
+    'theme.accent.green': { pt: 'Verde', en: 'Green' },
+    'theme.accent.orange': { pt: 'Laranja', en: 'Orange' },
+    'theme.accent.purple': { pt: 'Roxo', en: 'Purple' },
+
     /* ---- cabeçalho / banner ---- */
     'header.menu.aria': { pt: 'Opções do painel', en: 'Panel options' },
     'banner.download.title': { pt: 'Clique para baixar a nova versão', en: 'Click to download the new version' },

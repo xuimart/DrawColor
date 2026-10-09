@@ -18,6 +18,7 @@ window.Gode = (function () {
   let brushSize = 26;
   let flow = 0.35;                  // quanta tinta nova entra por toque
   let drawing = false;
+  let gestureTool = null;           // ferramenta em vigor no gesto atual
   let lastPoint = null;
   let carried = null;               // tinta carregada pela espátula
 
@@ -192,6 +193,7 @@ window.Gode = (function () {
     if (evt.button === 1) return;  // botão do meio é pan, não pintura
     const point = toLocal(evt);
     const active = toolFor(evt);
+    gestureTool = active;
     drawing = true;
     lastPoint = null;
     carried = null;
@@ -208,6 +210,8 @@ window.Gode = (function () {
 
   function onMove(evt) {
     if (!drawing) return;
+    // Botão já solto sem pointerup (foco roubado no meio do gesto).
+    if (evt.pointerType === 'mouse' && evt.buttons === 0) { onUp(evt); return; }
     const point = toLocal(evt);
     const active = toolFor(evt);
 
@@ -225,8 +229,11 @@ window.Gode = (function () {
     carried = null;
     if (canvas.hasPointerCapture(evt.pointerId)) canvas.releasePointerCapture(evt.pointerId);
     // Se o gesto foi conta-gotas, garante que a cor final chegou ao Photoshop
-    // sem esperar o debounce (o move não grava, só o painel acompanha).
-    if (toolFor(evt) === 'pick') pushPickNow();
+    // sem esperar o debounce (o move não grava, só o painel acompanha). Vale
+    // a ferramenta do início do gesto: soltar o Alt antes do botão não pode
+    // deixar a última amostra sem gravar.
+    if (gestureTool === 'pick' || toolFor(evt) === 'pick') pushPickNow();
+    gestureTool = null;
   }
 
   /* ---------------- superfície ---------------- */
@@ -368,6 +375,9 @@ window.Gode = (function () {
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('pointerup', onUp);
     canvas.addEventListener('pointercancel', onUp);
+    // Captura perdida (foco foi para o Photoshop no meio do gesto) também
+    // encerra o traço, senão `drawing` ficava preso em true.
+    canvas.addEventListener('lostpointercapture', onUp);
 
     /**
      * Cursor de conta-gotas enquanto o Alt está pressionado sobre o godê,
@@ -378,6 +388,15 @@ window.Gode = (function () {
      */
     canvas.addEventListener('pointermove', (evt) => {
       if (drawing) return;
+      /**
+       * Rede de segurança do Alt: se o keyup se perdeu (o Photoshop disputa a
+       * tecla), a ferramenta ficava presa no conta-gotas. O próprio movimento
+       * diz se o Alt ainda está pressionado; sem ele, volta a ferramenta base.
+       */
+      if (prevTool && tool === 'pick' && !evt.altKey) {
+        setTool(prevTool);
+        prevTool = null;
+      }
       canvas.style.cursor = evt.altKey ? 'copy'
         : (tool === 'pick' ? 'copy' : 'crosshair');
     });

@@ -27,6 +27,8 @@ const CORE_SCRIPTS = [
   // Logo depois do platform.js (precisa saber se é UXP) e antes de qualquer
   // medida de layout: traduz o max() do CSS para o CEF antigo (Chromium 74).
   'css-compat.js',
+  // Tema antes de qualquer desenho: escreve os tokens de cor escolhidos.
+  'theme.js',
   'fingerprint.js',
   'overlay.js',
   'oauth-server.js',

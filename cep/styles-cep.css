@@ -111,7 +111,90 @@ html, body {
  */
 .shell-tools .panel .mode-row { margin-top: var(--mode-gap); }
 
+/**
+ * v1.0.7: sem "Limitar cores" na janela de ferramentas.
+ *
+ * O bloco é posicionado por coordenadas da roda (--strip-top), que aqui não
+ * existe, e ficava flutuando abaixo da linha MODE. O limite continua no painel
+ * principal, que é onde a roda mostra o efeito.
+ */
+.shell-tools .limit-panel { display: none !important; }
+
+/**
+ * Nos Sliders o corpo mede o conteúdo, e o rodapé encosta na linha MODE em vez
+ * de ficar lá no fim da janela. As outras abas (Godê, Mixers, Paletas)
+ * continuam esticando para ocupar a janela, porque o conteúdo delas cresce.
+ *
+ * O vão que sobrava abaixo do MODE era a soma de três folgas: o padding de
+ * baixo do pane, a margem/padding da status bar (escondida no CEP, mas ainda
+ * reservando altura) e a linha extra do `--pane-pad-y`. Zerando o padding de
+ * baixo do pane e a status bar nos Sliders, o rodapé cola na linha MODE.
+ */
+/**
+ * Opção escolhida pelo usuário: nos Sliders da janela de ferramentas a faixa
+ * OCUPA A JANELA INTEIRA, sem vão abaixo da linha MODE em tamanho nenhum.
+ *
+ * A tab-body e o pane esticam; a lista de sliders cresce e distribui o espaço
+ * entre os trilhos (cada canal fica mais alto); a linha MODE fica logo abaixo.
+ * Não depende de redimensionar a janela nem de --body-h, então vale em
+ * qualquer altura e também no CEF antigo.
+ */
+.shell-tools .panel.on-sliders .tab-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.shell-tools .panel.on-sliders #paneSliders {
+  height: 100%;
+  justify-content: flex-start;
+}
+.shell-tools .panel.on-sliders #sliderList {
+  flex: 1 1 auto;        /* a lista ocupa todo o espaço acima do MODE */
+  min-height: 0;
+  justify-content: space-between;
+}
+.shell-tools .panel.on-sliders .slider-row {
+  flex: 1 1 auto;        /* cada trilho divide a altura disponível */
+  min-height: var(--row-h);
+}
+/* A linha MODE encosta no fim da lista, sem margem extra empurrando. */
+.shell-tools .panel.on-sliders .mode-row {
+  flex: 0 0 auto;
+  margin-top: var(--mode-gap);
+}
+/* Nos Sliders a status bar está escondida; não reserva o rodapé. */
+.shell-tools .panel.on-sliders .status-bar {
+  display: none !important;
+}
+
 /* Na janela de ferramentas o pane só aparece quando é a aba ativa, como no
    painel: o `display` continua atrelado a .is-active. */
 .shell-tools .panel #paneSliders.is-active { display: flex; }
 .shell-tools .panel #paneGode.is-active { display: flex; }
+
+/* ==================================================================== */
+/* JANELA TOOLS MAIS COMPACTA (vertical)                                */
+/*                                                                      */
+/* A janela de ferramentas é só controles, sem roda: dá para apertar as */
+/* linhas na vertical e caber tudo em menos altura. Os tokens de altura */
+/* são menores só aqui (`.shell-tools`), então o painel principal não    */
+/* muda em nada. Os pisos em px continuam garantindo alvo de clique.    */
+/* ==================================================================== */
+.shell-tools .panel {
+  --row-h:      max(22px, calc(24 * var(--u)));   /* linha de slider: 26 → 24 */
+  --tab-h:      max(26px, calc(32 * var(--u)));   /* aba: 38 → 32 */
+  --mode-h:     max(26px, calc(30 * var(--u)));   /* linha MODE: 33 → 30 */
+  --pane-pad-y: max(5px, calc(6 * var(--u)));     /* folga interna: 8 → 6 */
+  --slider-gap: max(5px, calc(7 * var(--u)));     /* entre sliders: 10 → 7 */
+  --mode-gap:   max(5px, calc(6 * var(--u)));     /* sliders → MODE: 8 → 6 */
+}
+
+/**
+ * Compacto significa linhas justas, não trilhos gigantes: nos Sliders a lista
+ * mede o conteúdo e cada trilho fica na altura da linha. Assim a janela toda
+ * fica baixa. (Sobrepõe o "ocupar a janela inteira" acima — aqui o objetivo é
+ * o oposto: o mínimo de altura.) Um eventual excesso de janela fica no fundo.
+ */
+.shell-tools .panel.on-sliders .tab-body { flex: 0 0 auto; }
+.shell-tools .panel.on-sliders #paneSliders { height: auto; }
+.shell-tools .panel.on-sliders #sliderList { flex: 0 0 auto; }
+.shell-tools .panel.on-sliders .slider-row { flex: 0 0 auto; height: var(--row-h); }

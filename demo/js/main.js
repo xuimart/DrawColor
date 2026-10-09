@@ -6,7 +6,7 @@
   'use strict';
 
   /** Versão local do plugin — atualizada a cada release. */
-  const DRAWCOLOR_VERSION = '1.0.6';
+  const DRAWCOLOR_VERSION = '1.0.7';
 
   /* ------------------------------------------------------------------ *
    * Diagnóstico de boot (DrawColor Diag)
@@ -241,6 +241,9 @@
     if (langEn) langEn.addEventListener('click', () => I18N.set('en'));
     I18N.onChange(syncLangButtons);
     syncLangButtons();
+
+    /* tema: fundo, destaque e acompanhar o Photoshop */
+    if (window.Theme && window.Theme.initMenu) window.Theme.initMenu();
   }
 
   /* ---------------- Rack de harmonias (Requisito 3.5) ---------------- */
@@ -799,6 +802,10 @@
         document.getElementById(m.tab).setAttribute('aria-selected', String(isTarget));
         document.getElementById(m.pane).classList.toggle('is-active', isTarget);
       });
+      // A janela de ferramentas trata os Sliders diferente das outras abas
+      // (ver styles-cep.css): a faixa de sliders ocupa a janela inteira.
+      const panelEl = document.getElementById('panel');
+      if (panelEl) panelEl.classList.toggle('on-sliders', targetTab === 'tabSliders');
       // Remede --body-h para caber o conteúdo do pane ativo (Sliders, Godê,
       // Paletas, Mixer). O JS é a fonte de verdade para essa variável.
       if (window.Panels && window.Panels.measureBodyHeight) {

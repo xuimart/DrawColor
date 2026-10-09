@@ -24,6 +24,10 @@
   --warn: #fbbf24;
   --focus: #de2246;
   --header-title: #f0f0ff;
+  /* v1.0.7: fundo de botão ligado e miolo da roda viraram tokens, para o
+     tema (js/theme.js) poder trocá-los. Os valores são os de antes. */
+  --pressed-bg: #35485c;
+  --wheel-hole: #2b2b2b;
 
   /* Nomes antigos, derivados dos tokens */
   --bg-panel: var(--panel-bg);
@@ -246,7 +250,7 @@ body {
 .sat-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .sat-btn[aria-pressed="true"], .sat-btn.is-active {
   border-color: var(--accent);
-  background: #35485c;
+  background: var(--pressed-bg);
 }
 
 .gamut-only[hidden] { display: none; }
@@ -428,7 +432,7 @@ body {
 }
 .tool-btn:hover { background: var(--bg-raised-hi); }
 .tool-btn canvas { display: block; }
-.tool-btn[aria-pressed="true"] { border-color: var(--accent); background: #35485c; }
+.tool-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--pressed-bg); }
 .tool-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
 /* ---------------- mixer (barras estilo Coolorus) ---------------- */
@@ -792,6 +796,35 @@ body {
 .menu-check:hover { background: var(--bg-raised-hi); }
 .menu-check input { accent-color: var(--accent); cursor: pointer; margin: 0; }
 
+/* ---------------- tema (menu) ---------------- */
+.theme-swatches { display: flex; gap: 4px; }
+.theme-swatches[aria-disabled="true"] { opacity: .35; pointer-events: none; }
+.theme-swatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--divider);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.theme-swatch:hover { border-color: var(--text-dim); }
+.theme-swatch[aria-checked="true"] { outline: 2px solid var(--text); outline-offset: 1px; }
+.theme-swatch:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+/**
+ * Tema claro: os ícones em canvas são desenhados em cinza claro, para fundo
+ * escuro. Inverter a luminosidade e girar o matiz 180° devolve as cores
+ * (o vermelho da máscara continua vermelho) com o claro e o escuro trocados.
+ * A roda em si não entra: as cores dela são o conteúdo.
+ */
+html[data-tone="light"] .sat-btn canvas,
+html[data-tone="light"] .harmony-btn canvas,
+html[data-tone="light"] .mask-kind canvas,
+html[data-tone="light"] .tool-btn canvas,
+html[data-tone="light"] .dial {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 .menu-sub { padding-left: 6px; }
 .menu-sub[aria-disabled="true"] { opacity: .4; pointer-events: none; }
 
@@ -1031,7 +1064,7 @@ body {
   cursor: pointer;
 }
 .gode-tool:hover { background: var(--bg-raised-hi); }
-.gode-tool.is-active { border-color: var(--accent); background: #35485c; }
+.gode-tool.is-active { border-color: var(--accent); background: var(--pressed-bg); }
 .gode-tool:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .gode-clear-inline { border-color: var(--text-dim); margin-left: auto; }
 .gode-undo, .gode-redo { border-color: var(--text-dim); flex: none; }
@@ -1166,7 +1199,7 @@ body {
 
 .rail-btn[aria-pressed="true"] {
   border-color: var(--accent);
-  background: #35485c;
+  background: var(--pressed-bg);
 }
 
 
@@ -1507,16 +1540,18 @@ body {
 /* Botões dentro do popout da máscara: menores que os do arco. O seletor pede
    `.sat-btn` de propósito — a classe `gamut-only` também marca o contêiner do
    popout, que não deve receber tamanho de botão. */
+/* v1.0.7: 34 → 46 e ícone 18 → 30. Em 34 os ícones ficavam pequenos demais
+   e o alvo de clique, difícil de acertar. */
 .panel .sat-btn.gamut-only,
 .panel #gamutTools .sat-btn {
-  width: calc(34 * var(--u));
-  height: calc(34 * var(--u));
-  font-size: calc(14 * var(--u));
+  width: calc(46 * var(--u));
+  height: calc(46 * var(--u));
+  font-size: calc(16 * var(--u));
 }
 .panel .sat-btn.gamut-only canvas,
 .panel #gamutTools .sat-btn canvas {
-  width: calc(18 * var(--u));
-  height: calc(18 * var(--u));
+  width: calc(30 * var(--u));
+  height: calc(30 * var(--u));
 }
 
 /**
@@ -1549,11 +1584,15 @@ body {
   width: calc(50 * var(--u));
   height: calc(50 * var(--u));
 }
-.panel #iconArc canvas,
-.panel #shapePopBtn canvas,
-.panel #gamutMaskBtn canvas {
+.panel #iconArc canvas {
   width: calc(29 * var(--u));
   height: calc(29 * var(--u));
+}
+/* Os dois botões de popout ganham ícone maior dentro do mesmo círculo de 50. */
+.panel #shapePopBtn canvas,
+.panel #gamutMaskBtn canvas {
+  width: calc(36 * var(--u));
+  height: calc(36 * var(--u));
 }
 
 
@@ -1565,14 +1604,24 @@ body {
   background: var(--surface-raised);
   border: calc(1 * var(--u)) solid var(--divider);
 }
-/* Menores que 44 para o menu não passar da borda direita do painel */
+/* v1.0.7: 34 → 46 e ícone 20 → 30, pelo mesmo motivo dos botões da máscara. */
 .panel .popout-menu .sat-btn {
-  width: calc(34 * var(--u));
-  height: calc(34 * var(--u));
+  width: calc(46 * var(--u));
+  height: calc(46 * var(--u));
 }
 .panel .popout-menu .sat-btn canvas {
-  width: calc(20 * var(--u));
-  height: calc(20 * var(--u));
+  width: calc(30 * var(--u));
+  height: calc(30 * var(--u));
+}
+
+/**
+ * O menu de forma abre em linha a partir da borda esquerda do botão, para a
+ * direita. Centrado sob o botão (x ≈ 43) a linha de três botões de 46 passaria
+ * da borda esquerda do painel e o primeiro ficaria cortado.
+ */
+.panel #shapeMenu {
+  left: 0;
+  transform: none;
 }
 
 /* ---------------- dials do trilho esquerdo (Requisitos 4.4, 4.5) ---------------- */
@@ -2194,6 +2243,10 @@ body {
   transform: none;
   flex: 1 1 auto;
   width: auto;
+  /* Sem isto o trilho não encolhe abaixo do próprio conteúdo (min-width:auto
+     é o padrão do flex), e numa janela estreita ele empurrava o campo de
+     número e o botão de conferência para fora da borda direita. */
+  min-width: 0;
   height: 100%;
 }
 .panel .slider-row .num-field {

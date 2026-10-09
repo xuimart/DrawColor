@@ -12,12 +12,12 @@
 -->
 <ExtensionManifest Version="6.0"
                    ExtensionBundleId="com.drawcolor.colorwheel"
-                   ExtensionBundleVersion="1.0.6"
+                   ExtensionBundleVersion="1.0.7"
                    ExtensionBundleName="DrawColor Wheel">
 
   <ExtensionList>
-    <Extension Id="com.drawcolor.colorwheel.panel" Version="1.0.6" />
-    <Extension Id="com.drawcolor.colorwheel.tools" Version="1.0.6" />
+    <Extension Id="com.drawcolor.colorwheel.panel" Version="1.0.7" />
+    <Extension Id="com.drawcolor.colorwheel.tools" Version="1.0.7" />
   </ExtensionList>
 
   <ExecutionEnvironment>
@@ -104,11 +104,14 @@
           <Menu>DrawColor Tools</Menu>
           <Geometry>
             <Size>
-              <Height>380</Height>
+              <!-- v1.0.7: janela de ferramentas compacta na vertical (sem roda
+                   nem "Limitar cores"). Vale na primeira abertura; depois o
+                   Photoshop lembra o tamanho que o usuário deixar. -->
+              <Height>225</Height>
               <Width>460</Width>
             </Size>
             <MinSize>
-              <Height>200</Height>
+              <Height>170</Height>
               <Width>280</Width>
             </MinSize>
             <MaxSize>

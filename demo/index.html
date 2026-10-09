@@ -11,7 +11,7 @@
 <div class="demo-shell">
   <p class="demo-note">Demo de design — Color Wheel Plugin (Photoshop UXP). Interativo, roda em navegador.</p>
 
-  <div class="panel" id="panel">
+  <div class="panel on-sliders" id="panel">
 
     <!-- Banner de atualização: sobreposto no topo, aparece só quando há versão
          nova (preenchido por showUpdateBanner). Clicar no texto abre o download;
@@ -54,6 +54,23 @@
           <button type="button" id="langPt" class="rot-btn wide" role="radio" aria-checked="true">PT</button>
           <button type="button" id="langEn" class="rot-btn wide" role="radio" aria-checked="false">EN</button>
         </div>
+
+        <hr class="menu-sep">
+
+        <!-- Tema: fundo, destaque e acompanhar o Photoshop (theme.js) -->
+        <p class="menu-group" data-i18n="menu.theme">Tema</p>
+        <div class="menu-row">
+          <span class="menu-label" data-i18n="theme.base">Fundo</span>
+          <span class="theme-swatches" id="themeBases" role="radiogroup" data-i18n-aria="theme.base"></span>
+        </div>
+        <div class="menu-row">
+          <span class="menu-label" data-i18n="theme.accent">Destaque</span>
+          <span class="theme-swatches" id="themeAccents" role="radiogroup" data-i18n-aria="theme.accent"></span>
+        </div>
+        <label class="menu-check">
+          <input type="checkbox" id="optThemeFollow">
+          <span data-i18n="theme.follow">Acompanhar o tema do Photoshop</span>
+        </label>
 
         <hr class="menu-sep">
 
@@ -203,43 +220,43 @@
         <div class="popout" id="gamutPop" data-layout="sat.gamutmask">
           <button class="sat-btn" id="gamutMaskBtn" aria-pressed="false"
                   data-i18n-title="gamut.mask.title" data-i18n-aria="gamut.mask.title">
-            <canvas width="22" height="22" aria-hidden="true"></canvas>
+            <canvas width="44" height="44" aria-hidden="true"></canvas>
           </button>
 
           <div class="popout-menu gamut-only" id="gamutTools" role="group"
                data-i18n-aria="gamut.tools.aria" hidden>
             <button class="sat-btn" id="gamutEditBtn" aria-pressed="false"
                     data-i18n-title="gamut.edit" data-i18n-aria="gamut.edit">
-              <canvas width="22" height="22" aria-hidden="true"></canvas>
+              <canvas width="44" height="44" aria-hidden="true"></canvas>
             </button>
             <button class="sat-btn" id="gamutLockBtn" aria-pressed="false"
                     data-i18n-title="gamut.lock" data-i18n-aria="gamut.lock">
-              <canvas width="22" height="22" aria-hidden="true"></canvas>
+              <canvas width="44" height="44" aria-hidden="true"></canvas>
             </button>
             <button class="sat-btn" id="gamutResetBtn"
                     data-i18n-title="gamut.reset" data-i18n-aria="gamut.reset">
-              <canvas width="22" height="22" aria-hidden="true"></canvas>
+              <canvas width="44" height="44" aria-hidden="true"></canvas>
             </button>
           </div>
         </div>
         <div class="popout" id="shapePop" data-layout="sat.shape">
           <button class="sat-btn" id="shapePopBtn" aria-haspopup="true" aria-expanded="false"
                   aria-controls="shapeMenu" data-i18n-title="shape.selector.title">
-            <canvas width="22" height="22" aria-hidden="true"></canvas>
+            <canvas width="44" height="44" aria-hidden="true"></canvas>
           </button>
           <div class="popout-menu" id="shapeMenu" role="radiogroup"
                data-i18n-aria="shape.selector.aria" hidden>
             <button class="sat-btn shape-btn is-active" data-shape="triangle" role="radio"
                     aria-checked="true" data-i18n-title="shape.triangle">
-              <canvas width="22" height="22" aria-hidden="true"></canvas>
+              <canvas width="44" height="44" aria-hidden="true"></canvas>
             </button>
             <button class="sat-btn shape-btn" data-shape="square" role="radio"
                     aria-checked="false" data-i18n-title="shape.square">
-              <canvas width="22" height="22" aria-hidden="true"></canvas>
+              <canvas width="44" height="44" aria-hidden="true"></canvas>
             </button>
             <button class="sat-btn shape-btn" data-shape="disc" role="radio"
                     aria-checked="false" data-i18n-title="shape.disc">
-              <canvas width="22" height="22" aria-hidden="true"></canvas>
+              <canvas width="44" height="44" aria-hidden="true"></canvas>
             </button>
           </div>
         </div>
@@ -571,6 +588,7 @@
 <script src="js/i18n.js"></script>
 <script src="js/platform.js"></script>
 <script src="js/css-compat.js"></script>
+<script src="js/theme.js"></script>
 <script src="js/fingerprint.js"></script>
 <script src="js/overlay.js"></script>
 <script src="js/oauth-server.js"></script>

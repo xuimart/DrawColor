@@ -15,7 +15,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("DrawColor Installer")]
 [assembly: AssemblyDescription("Instalador do Plugin DrawColor para Adobe Photoshop")]
-[assembly: AssemblyVersion("1.0.6.0")]
+[assembly: AssemblyVersion("1.0.7.0")]
 
 namespace DrawColorInstaller
 {
@@ -109,7 +109,7 @@ namespace DrawColorInstaller
         public InstallerForm()
         {
             // Janela
-            this.Text            = "Instalador DrawColor v1.0.6";
+            this.Text            = "Instalador DrawColor v1.0.7";
             this.Size            = new Size(780, 540);
             this.MinimumSize     = new Size(780, 540);
             this.MaximumSize     = new Size(780, 540);
@@ -139,7 +139,16 @@ namespace DrawColorInstaller
         void ShowChangelogOnce()
         {
             string changelog =
-                "DrawColor v1.0.6 - Novidades:\n\n" +
+                "DrawColor v1.0.7 - Novidades:\n\n" +
+                "  - Tema: escolha a cor de fundo do painel e a cor\n" +
+                "    de destaque, ou faca o painel acompanhar o tema\n" +
+                "    do Photoshop (menu de opcoes)\n" +
+                "  - Icones maiores e mais faceis de clicar na\n" +
+                "    mascara de gamut e no seletor de forma\n" +
+                "  - Conta-gotas (Alt): mais confiavel, nao trava\n" +
+                "    mais depois de mexer nos sliders LAB/CMYK\n" +
+                "  - Janela de ferramentas mais compacta na vertical\n\n" +
+                "Na v1.0.6:\n" +
                 "  - Correcao: no Photoshop 2021 (22.x) e anteriores\n" +
                 "    o painel aparecia amontoado no topo, com abas,\n" +
                 "    sliders e botoes grudados. Agora o layout fica\n" +
@@ -247,7 +256,7 @@ namespace DrawColorInstaller
 
             lblVersion = new Label
             {
-                Text      = "v1.0.6",
+                Text      = "v1.0.7",
                 Font      = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = TEXT_DIM,
                 Location  = new Point(720, 16),
@@ -720,7 +729,7 @@ namespace DrawColorInstaller
                         zipPath = tmpPath;
                         var sizeMB = new FileInfo(zipPath).Length / 1024 / 1024;
                         if (lblPlugin != null) lblPlugin.Text = "Plugin 100% embutido no EXE (" + sizeMB + " MB).";
-                        Log("Plugin carregado do instalador (v1.0.6 100% embutido).", Color.FromArgb(0,200,100));
+                        Log("Plugin carregado do instalador (v1.0.7 100% embutido).", Color.FromArgb(0,200,100));
                         UpdateButtonState();
                         return;
                     }
@@ -1179,7 +1188,7 @@ namespace DrawColorInstaller
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine("==== DrawColor - Diagnostico do Sistema ====");
                 sb.AppendLine("Gerado em: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-                sb.AppendLine("Instalador: v1.0.6");
+                sb.AppendLine("Instalador: v1.0.7");
                 sb.AppendLine();
 
                 sb.AppendLine("---- Windows ----");
