@@ -1573,11 +1573,25 @@ window.AppState = (function () {
     state.tempOffset = C.clamp(deg, -60, 60);
   }
 
+  function setBackground(rgb, reason) {
+    if (!rgb || !isNum(rgb.r) || !isNum(rgb.g) || !isNum(rgb.b)) return false;
+    const next = {
+      r: Math.round(C.clamp(rgb.r, 0, 255)),
+      g: Math.round(C.clamp(rgb.g, 0, 255)),
+      b: Math.round(C.clamp(rgb.b, 0, 255))
+    };
+    const prev = state.background;
+    if (next.r === prev.r && next.g === prev.g && next.b === prev.b) return false;
+    state.background = next;
+    emit(reason || 'background');
+    return true;
+  }
+
   function swapForeground() {
     const fg = getRgb();
     const bg = state.background;
-    state.background = fg;
-    setRgb(bg.r, bg.g, bg.b, { commit: true });
+    setBackground(fg);
+    setRgb(bg.r, bg.g, bg.b, { commit: true, reason: 'swap' });
   }
 
   // Semeia o histórico com a cor inicial
@@ -1598,7 +1612,7 @@ window.AppState = (function () {
     getRefHue, setRefHue, rotateSetTo, setActiveMarker,
     SCHEME_PHI, hasPhi, getPhi, setPhi, armRole,
     TETRA_PHI_DEFAULT, TETRA_PHI_MIN, TETRA_PHI_MAX,
-    setSliderMode, setTempOffset, swapForeground,
+    setSliderMode, setTempOffset, swapForeground, setBackground,
     quantizeHue, quantizeLevel, applyLimit, setLimit, getLimitedPalette,
     setBwSteps, getBwRamp,
     BW_GROUP_MAX, getBwGroup, setBwGroup, bwGroupMax, resetBwGroups, hasBwGroups,

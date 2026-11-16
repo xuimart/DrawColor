@@ -124,7 +124,7 @@ window.I18N = (function () {
     'theme.accent.purple': { pt: 'Roxo', en: 'Purple' },
 
     /* ---- cabeçalho / banner ---- */
-    'header.menu.aria': { pt: 'Opções do painel', en: 'Panel options' },
+    'header.menu.aria': { pt: 'Configurações', en: 'Settings' },
     'banner.download.title': { pt: 'Clique para baixar a nova versão', en: 'Click to download the new version' },
     'banner.default': { pt: 'Nova versão disponível — clique para baixar', en: 'New version available — click to download' },
     'banner.close.title': { pt: 'Fechar', en: 'Close' },
@@ -175,6 +175,24 @@ window.I18N = (function () {
     'mode.aria': { pt: 'Modo de cor', en: 'Color mode' },
 
     /* ---- mixers ---- */
+    'groups.label': { pt: 'Grupos', en: 'Groups' },
+    'groups.edit': { pt: 'Ativar ou desativar edição dos grupos de níveis', en: 'Toggle level group editing' },
+    'settings.title': { pt: 'Configurações', en: 'Settings' },
+    'settings.close': { pt: 'Fechar configurações', en: 'Close settings' },
+    'settings.appearance': { pt: 'Aparência', en: 'Appearance' },
+    'settings.color': { pt: 'Roda e cor', en: 'Wheel and color' },
+    'settings.display': { pt: 'Exibição', en: 'Display' },
+    'settings.adjustments': { pt: 'Ajustes de cor', en: 'Color adjustments' },
+    'levels.reset': { pt: 'Restaurar todos os níveis de Sliders e Mixers para gradiente contínuo', en: 'Reset all Sliders and Mixers levels to continuous gradients' },
+    'slider.fewerLevels': { pt: 'Menos níveis em {ch}', en: 'Fewer levels in {ch}' },
+    'slider.moreLevels': { pt: 'Mais níveis em {ch}', en: 'More levels in {ch}' },
+    'slider.levelCount': { pt: '{n} níveis', en: '{n} levels' },
+    'mix.fewer': { pt: 'Menos cores na mistura', en: 'Fewer mixing colors' },
+    'mix.more': { pt: 'Mais cores na mistura', en: 'More mixing colors' },
+    'mix.continuous': { pt: 'Gradiente contínuo', en: 'Continuous gradient' },
+    'mix.colorCount': { pt: '{n} cores', en: '{n} colors' },
+    'mix.values': { pt: 'Valores', en: 'Values' },
+    'mix.pair': { pt: 'Primária / secundária', en: 'Primary / secondary' },
     'mix.history': { pt: 'Color history', en: 'Color history' },
     'mix.blender': { pt: 'Blender', en: 'Blender' },
     'mix.blender.aria': { pt: 'Modo do blender', en: 'Blender mode' },

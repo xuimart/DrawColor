@@ -43,7 +43,6 @@ const CORE_SCRIPTS = [
   'wheel.js',
   'panels.js',
   'palettes.js',
-  'gode.js',
   'docking.js',
   'ps-bridge.js',
   'panel-sync.js',

@@ -20,6 +20,7 @@ require('./setup.js');
 
 // Foreground do "Photoshop" e registro dos scripts avaliados
 let hostForeground = { r: 10, g: 20, b: 30 };
+let hostBackground = { r: 90, g: 80, b: 70 };
 let evaluated = [];
 let savedLocalStorage;
 
@@ -32,10 +33,20 @@ function installCepMock() {
 
       // Leitura do foreground
       if (script.includes('app.foregroundColor.rgb') && script.includes('+ ","')) {
-        cb(`${hostForeground.r},${hostForeground.g},${hostForeground.b}`);
+        const fg = `${hostForeground.r},${hostForeground.g},${hostForeground.b}`;
+        cb(script.includes('app.backgroundColor.rgb') ? fg + `;${hostBackground.r},${hostBackground.g},${hostBackground.b}` : fg);
         return;
       }
 
+      if (script.includes('app.backgroundColor = c')) {
+        hostBackground = {
+          r: Number(/c\.rgb\.red = (-?[\d.]+)/.exec(script)[1]),
+          g: Number(/c\.rgb\.green = (-?[\d.]+)/.exec(script)[1]),
+          b: Number(/c\.rgb\.blue = (-?[\d.]+)/.exec(script)[1])
+        };
+        cb('');
+        return;
+      }
       // Escrita: aplica o ExtendScript recebido ao host falso
       if (script.includes('app.foregroundColor = c')) {
         const red = /c\.rgb\.red = (-?[\d.]+)/.exec(script);
@@ -102,6 +113,7 @@ function freshPlatform() {
 beforeEach(() => {
   savedLocalStorage = globalThis.localStorage;
   hostForeground = { r: 10, g: 20, b: 30 };
+  hostBackground = { r: 90, g: 80, b: 70 };
   installCepMock();
   installLocalStorage();
   loadCsInterface();
@@ -151,6 +163,39 @@ describe('Shell CEP: shim de CSInterface', () => {
 /* ---------------- PSBridge via ExtendScript ---------------- */
 
 describe('PSBridge no CEP: cor via ExtendScript', () => {
+  it('follows secondary-only changes and swapping writes both host colors', async () => {
+    const P = freshPlatform();
+    await P.ready();
+    reload('color.js');
+    const S = reload('state.js');
+    const B = reload('ps-bridge.js');
+    try {
+      B.init();
+      hostBackground = {r:200,g:180,b:160};
+      await new Promise(r => setTimeout(r, 450));
+      assert.deepStrictEqual(S.state.background, hostBackground);
+      assert.strictEqual(evaluated.filter(s => s.includes('app.foregroundColor = c')).length, 0);
+      S.swapForeground();
+      await new Promise(r => setTimeout(r, 120));
+      assert.deepStrictEqual(hostBackground, {r:10,g:20,b:30});
+      assert.deepStrictEqual(hostForeground, {r:200,g:180,b:160});
+    } finally { B.stop(); }
+  });
+  it('reads secondary color without writing foreground back to the host', async () => {
+    const P = freshPlatform();
+    await P.ready();
+    reload('color.js');
+    const S = reload('state.js');
+    const B = reload('ps-bridge.js');
+    try {
+      B.init();
+      assert.deepStrictEqual(S.state.background, hostBackground);
+      evaluated = [];
+      S.setBackground({r:1,g:2,b:3}, 'host-background');
+      await new Promise(r => setTimeout(r, 120));
+      assert.strictEqual(evaluated.filter(s => s.includes('app.foregroundColor = c')).length, 0);
+    } finally { B.stop(); }
+  });
   it('conecta e adota a cor de foreground do host', async () => {
     const P = freshPlatform();
     await P.ready();

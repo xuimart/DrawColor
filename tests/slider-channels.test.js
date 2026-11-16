@@ -36,6 +36,48 @@ before(() => {
   Panels = window.Panels;
 });
 
+describe('Per-channel slider levels', () => {
+  it('provides exactly the requested number of values and includes both channel extremes', () => {
+    for (const mode of Object.values(Panels.MODES)) for (const ch of mode.channels) {
+      for (let n=2;n<=10;n++) {
+        const values=new Set();
+        for(let pixel=0;pixel<=1000;pixel++) values.add(Panels.sliderLevelSample(ch,pixel/1000,n).value);
+        assert.strictEqual(values.size,n,`wrong bin count for ${ch.key}, ${n} levels`);
+        assert.strictEqual(Panels.sliderLevelSample(ch,0,n).value,ch.min);
+        assert.strictEqual(Panels.sliderLevelSample(ch,1,n).value,ch.max);
+      }
+    }
+  });
+  it('keeps a selected discrete value stable when it passes through numeric input / commit again', () => {
+    for (const mode of Object.values(Panels.MODES)) for (const ch of mode.channels) {
+      for(let n=2;n<=10;n++) for(let i=0;i<n;i++) {
+        const selected=Panels.sliderLevelSample(ch,(i+.5)/n,n).value;
+        const committed=Panels.sliderLevelSample(ch,(selected-ch.min)/(ch.max-ch.min),n).value;
+        assert.strictEqual(committed,selected,`${ch.key} moved on recommit`);
+      }
+    }
+  });
+  it('retains normal channel precision above 10 levels and rejects invalid pointer ratios', () => {
+    const r=Panels.MODES.RGB.channels[0];
+    assert.strictEqual(Panels.sliderLevelSample(r,.371,11).value,95);
+    assert.strictEqual(Panels.sliderLevelSample(r,NaN,5),null);
+    assert.strictEqual(Panels.sliderLevelSample(r,Infinity,5),null);
+    assert.strictEqual(Panels.sliderLevelSample(r,-1,5).value,0);
+    assert.strictEqual(Panels.sliderLevelSample(r,2,5).value,255);
+  });
+  it('keeps level counts independent across channels and modes', () => {
+    Panels.setSliderLevels('RGB','r',5);
+    Panels.setSliderLevels('RGB','g',8);
+    Panels.setSliderLevels('LAB','L',3);
+    assert.strictEqual(Panels.getSliderLevels('RGB','r'),5);
+    assert.strictEqual(Panels.getSliderLevels('RGB','g'),8);
+    assert.strictEqual(Panels.getSliderLevels('RGB','b'),11);
+    assert.strictEqual(Panels.getSliderLevels('LAB','L'),3);
+    Panels.setSliderLevels('LAB','L',11);
+    assert.strictEqual(Panels.getSliderLevels('RGB','r'),5);
+  });
+});
+
 describe('LAB: a ida e volta pelo RGB perde os extremos', () => {
   it('um triplo fora do sRGB não sobrevive ao arredondamento', () => {
     // Verde puro em LAB, bem fora do que o sRGB alcança.

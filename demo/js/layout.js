@@ -267,161 +267,45 @@ window.LAYOUT = (function () {
     return Math.max(0, (panelW - REFERENCE.width * scale) / 2);
   }
 
-  /* ---------------- Disposição responsiva (misto A + B) ---------------- */
+  /* ---------------- Disposição responsiva ---------------- */
 
   /**
-   * Duas disposições, escolhidas pelo tamanho do painel:
-   *
-   *   empilhada  — a de sempre: roda em cima, abas e sliders embaixo.
-   *   lado a lado — roda numa coluna à esquerda com a altura inteira, abas e
-   *                 sliders numa coluna à direita. Só entra quando deixa a
-   *                 roda bem maior (SIDE_MIN_GAIN), ou seja, em painel largo.
-   *
-   * Nas duas, quando sobra largura ao lado da roda, as ferramentas se
-   * espalham até as bordas da área (swatches, hex e botões à esquerda;
-   * harmonias à direita) e o "Limitar cores" vira um cartão no vão entre a
-   * roda e as harmonias. Tirar o bloco da faixa de baixo devolve altura à
-   * roda na disposição empilhada.
-   *
-   * Num dock normal ou alto não há sobra, e tudo fica como antes.
-   */
-  const SIDE_COL_W = 280;        // px, largura da coluna de controles
-  const SIDE_COL_MIN = 240;      // abaixo disso os sliders ficam apertados
-  const SIDE_COL_REF = 400;      // unidades: a coluna acompanha a escala
-  // Lado a lado só se a roda crescer 25%. Com 15% um painel de 530 x 390 já
-  // virava lado a lado, com a roda espremida numa área de 250 px ao lado de
-  // uma coluna quase do mesmo tamanho — empilhado com o cartão no vão fica
-  // melhor ali.
-  const SIDE_MIN_GAIN = 1.25;
-  const SIDE_KEEP_GAIN = 1.12;   // histerese: já em lado a lado, fica até aqui
-  const SPREAD_MIN_SLACK = 8;    // px de sobra lateral para espalhar
-  const SPREAD_PAD = 6;          // px entre as ferramentas e a borda
-  const LIMIT_CARD_W = 120;      // px, cartão do "Limitar cores"
-  const LIMIT_CARD_H = 84;       // px, altura aproximada do cartão
-
-  /** Ferramentas que vão para a borda esquerda ou direita ao espalhar. */
-  function spreadSide(id) {
-    if (/^(sat\.|hex\.|history\.|swatch\.)/.test(id)) return 'left';
-    // Os dials T e B ficam em cima da coluna de harmonias e vão junto com ela.
-    if (/^(harmony\.|rail\.dial\.)/.test(id)) return 'right';
-    return null;
-  }
-
-  /** Coluna de harmonias na referência: centro em x e meio diâmetro. */
-  const HARMONY_X = 581;
-  const HARMONY_HALF = 25;
-
-  /** Vão entre a borda direita da roda e a coluna de harmonias já espalhada. */
-  function gutterAt(s, ox, right) {
-    const wheelRight = ox + (REFERENCE.wheelCenter.x + REFERENCE.outerR) * s;
-    const harmonyLeft = right - SPREAD_PAD - (REFERENCE.width - HARMONY_X + HARMONY_HALF) * s;
-    return { x: wheelRight, w: harmonyLeft - wheelRight };
-  }
-
-  function cardFits(gutter, s) {
-    return gutter.w >= LIMIT_CARD_W + 12 &&
-      REFERENCE.outerR * 2 * s >= LIMIT_CARD_H;
-  }
-
-  /**
-   * Plano da disposição. Função pura, para poder ser testada sem DOM.
-   *
-   * `strip` é a altura da faixa de baixo na disposição empilhada:
-   *   { tabH, bodyH, statusH, limitRowH }
-   * `opts.allowSide` liga o lado a lado (só onde a altura vem do host);
-   * `opts.allowSpread` desliga o espalhamento no modo de organização, em que
-   * as posições precisam bater com as âncoras.
+   * A toolbar sempre precede as abas. O painel amplo usa uma coluna de
+   * controles estável; as ferramentas continuam junto da roda, sem ir para
+   * bordas distantes nem transportar o limitador para um vão ou rodapé.
    */
   function computePlan(w, h, strip, opts) {
     opts = opts || {};
-    const allowSpread = opts.allowSpread !== false;
-    const base = strip.tabH + strip.bodyH + strip.statusH;
-
-    // Empilhada, tentando o "Limitar cores" ao lado da roda.
-    const stackedPlan = function (canSpread) {
-      let s = computeScale(w, h, base);
-      let ox = computeOffsetX(w, s);
-      let spread = canSpread && ox >= SPREAD_MIN_SLACK;
-      let gutter = gutterAt(s, ox, w);
-      const limit = spread && cardFits(gutter, s) ? 'gutter' : 'row';
-
-      if (limit === 'row') {
-        s = computeScale(w, h, base + strip.limitRowH);
-        ox = computeOffsetX(w, s);
-        spread = canSpread && ox >= SPREAD_MIN_SLACK;
-        gutter = gutterAt(s, ox, w);
-      }
-      return {
-        mode: 'stacked', scale: s, ox, oy: 0, spread,
-        right: w, areaW: w, colW: 0, limit, gutter
-      };
+    const base = strip.tabH + strip.bodyH + strip.statusH + strip.limitRowH;
+    const stackedScale = computeScale(w, h, base);
+    const stacked = {
+      mode:'stacked', scale:stackedScale, ox:computeOffsetX(w, stackedScale), oy:0,
+      spread:false, right:w, areaW:w, colW:0, limit:'row'
     };
+    if (!opts.allowSide || !(h >= 280)) return stacked;
 
-    const stacked = stackedPlan(allowSpread);
-    if (!opts.allowSide) return stacked;
-
-    // A escolha entre empilhada e lado a lado não depende de espalhar: entrar
-    // no modo de organização não pode trocar a disposição debaixo do usuário.
-    const reference = allowSpread ? stacked : stackedPlan(true);
-
-    // Lado a lado. Sem altura do host não há como decidir.
-    if (!(h > 0)) return stacked;
-
-    const baseCol = Math.min(SIDE_COL_W, w * 0.55);
-    if (baseCol < SIDE_COL_MIN) return stacked;
-
-    // A coluna cresce com a escala, para o texto das abas e sliders (que
-    // também escala) continuar cabendo. Poucas iterações bastam: coluna
-    // maior → roda menor → coluna pedida menor, e isso converge rápido.
-    const sideScale = function (cw) {
-      return Math.max(MIN_SCALE, Math.min((w - cw) / REFERENCE.width, h / TOP_REFERENCE_HEIGHT));
-    };
-    let colW = baseCol;
-    for (let i = 0; i < 4; i++) {
-      const want = Math.max(baseCol, Math.min(SIDE_COL_REF * sideScale(colW), w * 0.5));
-      colW = (colW + want) / 2;
-    }
-    colW = Math.round(colW);
-
+    // Histerese evita alternar disposições ao arrastar perto do limite.
+    const keeping = opts.prevMode === 'side';
+    if (w < (keeping ? 860 : 900) || w / h < (keeping ? 1.12 : 1.20)) return stacked;
+    const colW = Math.round(Math.max(360, Math.min(520, w * 0.36)));
     const areaW = w - colW;
-    const ss = sideScale(colW);
-    const gain = opts.prevMode === 'side' ? SIDE_KEEP_GAIN : SIDE_MIN_GAIN;
-    if (!(ss > reference.scale * gain)) return stacked;
-
-    const sox = Math.max(0, (areaW - REFERENCE.width * ss) / 2);
-    const soy = Math.max(0, (h - TOP_REFERENCE_HEIGHT * ss) / 2);
-    const sspread = allowSpread && sox >= SPREAD_MIN_SLACK;
-    const sgutter = gutterAt(ss, sox, areaW);
-
-    return {
-      mode: 'side', scale: ss, ox: sox, oy: soy, spread: sspread,
-      right: areaW, areaW, colW,
-      limit: sspread && cardFits(sgutter, ss) ? 'gutter' : 'column',
-      gutter: sgutter
-    };
+    const headerH = 44, pad = 16;
+    const contentRefH = TOP_REFERENCE_HEIGHT - 56;
+    const availableH = h - headerH - 2 * pad;
+    const scale = Math.max(MIN_SCALE, Math.min(1.35, (areaW - 2 * pad) / REFERENCE.width, availableH / contentRefH));
+    const ox = Math.max(0, (areaW - REFERENCE.width * scale) / 2);
+    // A origem pode ficar um pouco acima de zero: a faixa de cabeçalho da
+    // referência (56 unidades) é substituída pelo cabeçalho fixo de 44px.
+    const oy = headerH + pad + Math.max(0, (availableH - contentRefH * scale) / 2) - 56 * scale;
+    return {mode:'side', scale:scale, ox:ox, oy:oy, spread:false,
+      right:areaW, areaW:areaW, colW:colW, limit:'row'};
   }
 
   /* ---------------- Aplicação do layout ---------------- */
 
-  /**
-   * Ponto de um controle no painel, em px.
-   *
-   * Sem espalhar é a âncora pura. Espalhando, o controle mantém a distância
-   * que tinha da borda da referência (esquerda ou direita), medida em
-   * unidades, só que agora a partir da borda real da área — é o que leva as
-   * ferramentas para as laterais em vez de deixá-las grudadas na roda.
-   */
+  /** Ferramentas mantêm a composição da referência ao redor da roda. */
   function controlPoint(id, anchor, center, ctx) {
-    const side = ctx && ctx.spread ? spreadSide(id) : null;
-    if (!side) return anchorToPoint(anchor, center, currentScale);
-    const rp = anchorToPoint(anchor, REFERENCE.wheelCenter, 1);
-    const s = currentScale;
-    return {
-      x: side === 'left'
-        ? SPREAD_PAD + rp.x * s
-        : ctx.right - SPREAD_PAD - (REFERENCE.width - rp.x) * s,
-      y: currentOffsetY + rp.y * s
-    };
+    return anchorToPoint(anchor, center, currentScale);
   }
 
   function place(el, anchor, center, id, ctx) {
@@ -475,9 +359,9 @@ window.LAYOUT = (function () {
     const body = parseFloat(el.style.getPropertyValue('--body-h'));
     return {
       tabH: Math.max(28, 38 * s),
-      bodyH: body > 0 ? body : Math.max(128, 155 * s),
+      bodyH: body > 0 ? body : Math.max(152, 173 * s),
       statusH: statusHidden ? 0 : Math.max(26, 47 * s),
-      limitRowH: Math.max(24, 30 * s)
+      limitRowH: Math.max(44, 52 * s)
     };
   }
 
@@ -489,41 +373,16 @@ window.LAYOUT = (function () {
 
   /** Classes e variáveis que o CSS lê para cada disposição. */
   function applyPlanToDom(el, plan) {
-    const px = function (n) { return n.toFixed(2) + 'px'; };
     el.classList.toggle('layout-side', plan.mode === 'side');
-    el.classList.toggle('limit-card', plan.limit !== 'row');
-    el.classList.toggle('limit-col', plan.limit === 'column');
-
-    el.style.setProperty('--oy', px(plan.oy));
-    if (plan.limit === 'row') el.style.removeProperty('--limit-h');
-    else el.style.setProperty('--limit-h', '0px');
-
+    el.classList.remove('limit-card', 'limit-col');
+    el.style.setProperty('--oy', plan.oy.toFixed(2) + 'px');
+    ['--limit-x', '--limit-y', '--limit-w', '--side-limit-h', '--limit-h'].forEach(function (key) { el.style.removeProperty(key); });
     if (plan.mode === 'side') {
-      el.style.setProperty('--area-w', px(plan.areaW));
-      el.style.setProperty('--col-w', px(plan.colW));
+      el.style.setProperty('--area-w', plan.areaW.toFixed(2) + 'px');
+      el.style.setProperty('--col-w', plan.colW.toFixed(2) + 'px');
     } else {
       el.style.removeProperty('--area-w');
       el.style.removeProperty('--col-w');
-    }
-
-    const card = el.querySelector('.limit-panel');
-    if (plan.limit === 'gutter') {
-      const cw = Math.min(LIMIT_CARD_W, plan.gutter.w - 12);
-      el.style.setProperty('--limit-w', px(cw));
-      el.style.setProperty('--limit-x', px(plan.gutter.x + (plan.gutter.w - cw) / 2));
-      el.style.setProperty('--limit-y', px(plan.oy + REFERENCE.wheelCenter.y * plan.scale));
-      el.style.setProperty('--side-limit-h', '0px');
-    } else if (plan.limit === 'column') {
-      el.style.removeProperty('--limit-x');
-      el.style.removeProperty('--limit-y');
-      el.style.removeProperty('--limit-w');
-      // Medido depois de a classe entrar: o cartão empilha as linhas e a
-      // altura depende da fonte, que tem piso em px.
-      const ch = card && card.offsetHeight > 0 ? card.offsetHeight : LIMIT_CARD_H;
-      el.style.setProperty('--side-limit-h', px(ch + 12));
-    } else {
-      ['--limit-x', '--limit-y', '--limit-w'].forEach(function (v) { el.style.removeProperty(v); });
-      el.style.setProperty('--side-limit-h', '0px');
     }
   }
 

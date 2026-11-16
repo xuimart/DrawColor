@@ -15,7 +15,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("DrawColor Installer")]
 [assembly: AssemblyDescription("Instalador do Plugin DrawColor para Adobe Photoshop")]
-[assembly: AssemblyVersion("1.0.7.0")]
+[assembly: AssemblyVersion("1.0.8.0")]
 
 namespace DrawColorInstaller
 {
@@ -109,7 +109,7 @@ namespace DrawColorInstaller
         public InstallerForm()
         {
             // Janela
-            this.Text            = "Instalador DrawColor v1.0.7";
+            this.Text            = "Instalador DrawColor v1.0.8";
             this.Size            = new Size(780, 540);
             this.MinimumSize     = new Size(780, 540);
             this.MaximumSize     = new Size(780, 540);
@@ -139,59 +139,22 @@ namespace DrawColorInstaller
         void ShowChangelogOnce()
         {
             string changelog =
-                "DrawColor v1.0.7 - Novidades:\n\n" +
-                "  - Tema: escolha a cor de fundo do painel e a cor\n" +
-                "    de destaque, ou faca o painel acompanhar o tema\n" +
-                "    do Photoshop (menu de opcoes)\n" +
-                "  - Icones maiores e mais faceis de clicar na\n" +
-                "    mascara de gamut e no seletor de forma\n" +
-                "  - Conta-gotas (Alt): mais confiavel, nao trava\n" +
-                "    mais depois de mexer nos sliders LAB/CMYK\n" +
-                "  - Janela de ferramentas mais compacta na vertical\n\n" +
-                "Na v1.0.6:\n" +
-                "  - Correcao: no Photoshop 2021 (22.x) e anteriores\n" +
-                "    o painel aparecia amontoado no topo, com abas,\n" +
-                "    sliders e botoes grudados. Agora o layout fica\n" +
-                "    igual ao das versoes novas do Photoshop\n" +
-                "  - Botao Diagnostico no instalador, para o suporte\n\n" +
-                "Na v1.0.5:\n" +
-                "  - Idioma Portugues / Ingles no menu de opcoes\n\n" +
-                "Na v1.0.3:\n" +
-                "  - Layout responsivo: em painel largo a roda fica\n" +
-                "    ao lado dos sliders e ganha a altura inteira\n" +
-                "  - Ferramentas vao para as bordas e o Limitar cores\n" +
-                "    vira um cartao ao lado da roda quando sobra espaco\n" +
-                "  - Campo hex nao e mais cortado em painel pequeno\n" +
-                "  - Verificar atualizacao no topo do menu de opcoes\n\n" +
-                "Na v1.0.2:\n" +
-                "  - Regua B/W do branco ao preto: com 2 valores sao\n" +
-                "    os extremos, com 3 entra o cinza do meio\n" +
-                "  - Grupos de valores: divida um quadrado da regua\n" +
-                "    em varios tons com + e -, e desfaca com o reset\n" +
-                "  - Conta-gotas do Gode (Alt) mais confiavel e\n" +
-                "    aplicando a cor na hora\n" +
-                "  - Suporte ao Photoshop 2019\n\n" +
-                "Na v1.0.1:\n" +
-                "  - Roda RYB (do pintor) alem da RGB\n" +
-                "  - Harmonias no estilo Coolorus\n" +
-                "  - Base do painel nao e mais cortada\n" +
-                "  - Verificacao de atualizacao no menu\n\n" +
-                "RECURSOS:\n" +
-                "  - Roda de cores com triangulo, quadrado e disco\n" +
-                "  - Harmonias: complementar, analoga, triade,\n" +
-                "    tetrade e analoga acentuada\n" +
-                "  - Gamut Masking com edicao de vertices\n" +
-                "  - Sliders RGB, HSV, LAB, CMYK e B/W\n" +
-                "  - Mixers de cor com historico\n" +
-                "  - Paletas salvaveis\n" +
-                "  - Gode (mistura de tintas)\n" +
-                "  - Layout customizavel com editor visual\n" +
-                "  - Painel de ferramentas separado\n\n" +
+                "DrawColor v1.0.8 - Novidades:\n\n" +
+                "  - Niveis independentes nos sliders e mixers,\n" +
+                "    com selecao por quadrado ate 10 cores\n" +
+                "  - Grupos de tons com botao para editar e\n" +
+                "    reset para voltar ao gradiente continuo\n" +
+                "  - Mixer das cores primaria e secundaria\n" +
+                "    sincronizado com o Photoshop\n" +
+                "  - Menu de configuracoes reorganizado\n" +
+                "  - Layout melhorado para janelas largas\n" +
+                "    e limitador de cores em posicao fixa\n" +
+                "  - Gode desativado\n\n" +
                 "Desenvolvido por Xuimart\n" +
                 "Apoie: https://livepix.gg/xuimart";
             MessageBox.Show(
                 changelog,
-                "Novidades do DrawColor v1.0.6",
+                "Novidades do DrawColor v1.0.8",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
             );
@@ -256,7 +219,7 @@ namespace DrawColorInstaller
 
             lblVersion = new Label
             {
-                Text      = "v1.0.7",
+                Text      = "v1.0.8",
                 Font      = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = TEXT_DIM,
                 Location  = new Point(720, 16),
@@ -729,7 +692,7 @@ namespace DrawColorInstaller
                         zipPath = tmpPath;
                         var sizeMB = new FileInfo(zipPath).Length / 1024 / 1024;
                         if (lblPlugin != null) lblPlugin.Text = "Plugin 100% embutido no EXE (" + sizeMB + " MB).";
-                        Log("Plugin carregado do instalador (v1.0.7 100% embutido).", Color.FromArgb(0,200,100));
+                        Log("Plugin carregado do instalador (v1.0.8 100% embutido).", Color.FromArgb(0,200,100));
                         UpdateButtonState();
                         return;
                     }
@@ -1188,7 +1151,7 @@ namespace DrawColorInstaller
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine("==== DrawColor - Diagnostico do Sistema ====");
                 sb.AppendLine("Gerado em: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-                sb.AppendLine("Instalador: v1.0.7");
+                sb.AppendLine("Instalador: v1.0.8");
                 sb.AppendLine();
 
                 sb.AppendLine("---- Windows ----");

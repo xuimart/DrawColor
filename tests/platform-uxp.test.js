@@ -40,10 +40,12 @@ const uxpMock = {
 
 // Photoshop falso: foreground legível e batchPlay registrando as escritas
 let foreground = { rgb: { red: 10, green: 20, blue: 30 } };
+let background = {rgb: {red:90,green:80,blue:70}};
 let batchPlayCalls = [];
 
 const psMock = {
   app: {
+    get backgroundColor() { return background; },
     get foregroundColor() { return foreground; }
   },
   action: {
@@ -219,6 +221,20 @@ describe('LayoutStore persiste através do Platform Adapter no UXP', () => {
 /* ---------------- PSBridge ---------------- */
 
 describe('PSBridge: ponte de cor com o Photoshop', () => {
+  it('polls secondary-only changes without echoing foreground writes', async () => {
+    const P = freshPlatform();
+    await P.ready();
+    reload('color.js');
+    const S = reload('state.js');
+    const B = reload('ps-bridge.js');
+    try {
+      B.init();
+      background = {rgb:{red:210,green:190,blue:170}};
+      await new Promise(r=>setTimeout(r,450));
+      assert.deepStrictEqual(S.state.background,{r:210,g:190,b:170});
+      assert.strictEqual(batchPlayCalls.length,0);
+    } finally { B.stop(); background = {rgb:{red:90,green:80,blue:70}}; }
+  });
   beforeEach(() => {
     files = {};
     batchPlayCalls = [];
@@ -240,6 +256,7 @@ describe('PSBridge: ponte de cor com o Photoshop', () => {
     assert.strictEqual(rgb.r, 10);
     assert.strictEqual(rgb.g, 20);
     assert.strictEqual(rgb.b, 30);
+    assert.deepStrictEqual(S.state.background, {r:90,g:80,b:70});
 
     B.stop();
   });

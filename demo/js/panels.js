@@ -177,11 +177,239 @@ window.Panels = (function () {
 
   /* ================= Sliders ================= */
 
+  var groupEditing = false;
+  function isGroupEditing() { return groupEditing; }
+  function setGroupEditing(enabled) {
+    groupEditing = !!enabled;
+    var panel = document.getElementById('panel');
+    if (panel) panel.classList.toggle('groups-editing', groupEditing);
+    var button = document.getElementById('groupsToggleBtn');
+    if (button) button.setAttribute('aria-pressed', String(groupEditing));
+    sliderRows.forEach(function (entry) { if (entry.groupUI) entry.groupUI.refresh(); });
+    Object.keys(mixerGroupUIs).forEach(function (key) { mixerGroupUIs[key].refresh(); });
+    ['bw', 'mixBw'].forEach(function (prefix) {
+      if (document.getElementById(prefix + 'GroupTrack')) refreshBwGroupControls(S.state.bwSteps, prefix);
+    });
+    requestAnimationFrame(measureBodyHeight);
+  }
+
+  var levelGroups = {};
+  var selectedLevelCells = {};
+  var mixerGroupUIs = {};
+
+  function sliderGroupKey(mode, channel) { return 'slider:' + mode + ':' + channel; }
+  function mixerGroupKey(key, mode) { return 'mixer:' + stepsKey(key, mode); }
+  function getLevelGroups(id) { return levelGroups[id] || {}; }
+  function getLevelGroup(id, index) { return getLevelGroups(id)[index] || 1; }
+
+  function levelGroupMax(count, index, precision) {
+    if (count < 2 || count > 10 || !Number.isInteger(index) || index < 0 || index >= count) return 1;
+    var lo = index === 0 ? 0 : (index - 0.5) / (count - 1);
+    var hi = index === count - 1 ? 1 : (index + 0.5) / (count - 1);
+    return Math.max(1, Math.min(8, precision ? Math.floor((hi - lo) * precision + 1e-8) : 8));
+  }
+
+  function saveLevelGroups() {
+    if (window.Platform && window.Platform.storage) window.Platform.storage.setItem('drawcolor-level-groups', JSON.stringify(levelGroups));
+  }
+
+  function clearLevelGroups(id) {
+    delete levelGroups[id];
+    delete selectedLevelCells[id];
+    saveLevelGroups();
+  }
+
+  function setLevelGroup(id, index, subdivisions, count, precision) {
+    if (!Number.isFinite(subdivisions) || levelGroupMax(count, index, precision) <= 1) return;
+    var n = C.clamp(Math.round(subdivisions), 1, levelGroupMax(count, index, precision));
+    if (n > 1) {
+      if (!levelGroups[id]) levelGroups[id] = {};
+      levelGroups[id][index] = n;
+    } else if (levelGroups[id]) {
+      delete levelGroups[id][index];
+      if (!Object.keys(levelGroups[id]).length) delete levelGroups[id];
+    }
+    saveLevelGroups();
+  }
+
+  function loadLevelGroups() {
+    try {
+      var stored = JSON.parse(window.Platform.storage.getItem('drawcolor-level-groups') || '{}');
+      Object.keys(stored).forEach(function (id) {
+        var parts = id.split(':');
+        var valid = parts.length === 3 && ((parts[0] === 'slider' && MODES[parts[1]] && MODES[parts[1]].channels.some(function (ch) {return ch.key === parts[2];})) || (parts[0] === 'mixer' && MIXER_KEYS.indexOf(parts[1]) >= 0));
+        if (!valid || !stored[id] || typeof stored[id] !== 'object') return;
+        Object.keys(stored[id]).forEach(function (index) {
+          var k = stored[id][index];
+          if (/^[0-9]$/.test(index) && Number.isInteger(k) && k >= 2 && k <= 8) {
+            if (!levelGroups[id]) levelGroups[id] = {};
+            levelGroups[id][index] = k;
+          }
+        });
+      });
+    } catch (e) { /* no saved groups */ }
+  }
+
+  // Parent cells keep equal screen widths. Their sub-colors sample only the
+  // interval halfway to each neighboring parent's value, like the B/W ramp.
+  function groupedLevelSelection(ratio, count, groups) {
+    var selection = mixerSelection(ratio, count);
+    if (selection.index === null) return selection;
+    var i = selection.index, k = groups && groups[i] || 1;
+    if (k <= 1) return selection;
+    var local = C.clamp(ratio, 0, 1) * count - i;
+    var sub = Math.min(k - 1, Math.floor(local * k));
+    var lo = i === 0 ? 0 : (i - 0.5) / (count - 1);
+    var hi = i === count - 1 ? 1 : (i + 0.5) / (count - 1);
+    return {t:lo + (sub + 0.5) * (hi - lo) / k, position:(i + (sub + 0.5) / k) / count, index:i, subIndex:sub};
+  }
+
+  function levelStops(count, groups) {
+    if (count > 10) return [];
+    var stops = [];
+    for (var i = 0; i < count; i++) {
+      var k = groups && groups[i] || 1;
+      for (var j = 0; j < k; j++) stops.push(groupedLevelSelection((i + (j + 0.5) / k) / count, count, groups));
+    }
+    return stops;
+  }
+
+  function nearestLevelStop(stops, ratio) {
+    var nearest = 0;
+    for (var i = 1; i < stops.length; i++) if (Math.abs(stops[i].t - ratio) < Math.abs(stops[nearest].t - ratio)) nearest = i;
+    return nearest;
+  }
+
+  function selectionForValue(ratio, count, groups) {
+    var stops = levelStops(count, groups);
+    return stops.length ? stops[nearestLevelStop(stops, ratio)] : {t:ratio, position:C.clamp(ratio, 0, 1), index:null};
+  }
+
+  function paintTrackSelection(track, thumb, selection, count, groups) {
+    if (!track || !thumb) return;
+    var discrete = count <= 10 && selection.index !== null;
+    track.classList.toggle('is-discrete', discrete);
+    var k = discrete && groups && groups[selection.index] || 1;
+    thumb.classList.toggle('is-subcell', discrete && k > 1);
+    if (discrete) {
+      var sub = selection.subIndex || 0;
+      thumb.style.left = ((selection.index + sub / k) / count * 100) + '%';
+      thumb.style.width = (100 / (count * k)) + '%';
+    } else {
+      thumb.style.left = (selection.position * 100) + '%';
+      thumb.style.width = '';
+    }
+  }
+
+  function drawLevelDividers(ctx, width, height, count, groups) {
+    if (count > 10) return;
+    for (var i = 0; i < count; i++) {
+      var k = groups && groups[i] || 1;
+      for (var j = 0; j < k; j++) {
+        if (i === 0 && j === 0) continue;
+        ctx.fillStyle = j === 0 ? 'rgba(0,0,0,.3)' : 'rgba(0,0,0,.16)';
+        ctx.fillRect(Math.round((i + j / k) * width / count), 0, 1, height);
+      }
+    }
+  }
+
+  function createLevelGroupUI(track, container, getConfig, onChange, before) {
+    var row = document.createElement('div');
+    row.className = 'level-group-row'; row.hidden = true;
+    var controls = document.createElement('div'); controls.className = 'level-group-controls';
+    var number = document.createElement('b'); number.setAttribute('aria-live', 'polite');
+    var plus = document.createElement('button'); plus.type = 'button'; plus.textContent = '+';
+    var minus = document.createElement('button'); minus.type = 'button'; minus.textContent = '−';
+    plus.dataset.groupDelta = '1'; minus.dataset.groupDelta = '-1';
+    controls.append(number, plus, minus); row.appendChild(controls);
+    if (before) container.insertBefore(row, before); else container.appendChild(row);
+    var outline = document.createElement('span'); outline.className = 'level-cell-outline'; outline.hidden = true;
+    outline.setAttribute('aria-hidden', 'true'); track.appendChild(outline);
+    function refresh() {
+      var config = getConfig(), index = selectedLevelCells[config.id];
+      var show = groupEditing && config.count <= 10 && Number.isInteger(index) && index < config.count;
+      if (row.hidden === show) requestAnimationFrame(measureBodyHeight);
+      row.hidden = !show; outline.hidden = !show;
+      if (!show) return;
+      var k = getLevelGroup(config.id, index);
+      number.textContent = k;
+      plus.setAttribute('aria-label', I18N.t('bw.groupPlus'));
+      minus.setAttribute('aria-label', I18N.t('bw.groupMinus'));
+      plus.disabled = k >= levelGroupMax(config.count, index, config.precision);
+      minus.disabled = k <= 1;
+      var rect = track.getBoundingClientRect(), parent = container.getBoundingClientRect();
+      row.style.marginLeft = Math.max(0, rect.left - parent.left) + 'px';
+      row.style.width = rect.width + 'px';
+      var center = rect.width * (index + 0.5) / config.count;
+      controls.style.left = Math.max(0, Math.min(rect.width - controls.offsetWidth, center - controls.offsetWidth / 2)) + 'px';
+      outline.style.left = (index * 100 / config.count) + '%';
+      outline.style.width = (100 / config.count) + '%';
+    }
+    [plus, minus].forEach(function (button) {
+      button.addEventListener('click', function () {
+        var config = getConfig(), index = selectedLevelCells[config.id];
+        setLevelGroup(config.id, index, getLevelGroup(config.id, index) + Number(button.dataset.groupDelta), config.count, config.precision);
+        onChange(); refresh();
+      });
+    });
+    var disconnect = window.Platform && window.Platform.observeResize ? window.Platform.observeResize(track, refresh) : function () {};
+    return {element:row, refresh:refresh, dispose:disconnect};
+  }
+
+  function hasCustomLevels() {
+    return [sliderLevels, mixerSteps].some(function (settings) {
+      return Object.keys(settings || {}).some(function (key) { return settings[key] <= 10; });
+    });
+  }
+
+  function resetLevels() {
+    sliderLevels = {};
+    mixerSteps = {};
+    levelGroups = {};
+    selectedLevelCells = {};
+    if (window.Platform && window.Platform.storage) {
+      window.Platform.storage.removeItem('drawcolor-slider-levels');
+      window.Platform.storage.removeItem('drawcolor-mixer-steps');
+      window.Platform.storage.removeItem('drawcolor-level-groups');
+    }
+  }
+
+  function refreshResetLevels() {
+    var button = document.getElementById('resetLevelsBtn');
+    if (button) button.disabled = !hasCustomLevels();
+  }
+
+  var sliderLevels = {};
+  function getSliderLevels(mode, channel) { return sliderLevels[mode + ':' + channel] || 11; }
+  function setSliderLevels(mode, channel, count) {
+    if (!MODES[mode] || !MODES[mode].channels.some(function (ch) { return ch.key === channel; }) || !Number.isFinite(count)) return;
+    const next = C.clamp(Math.round(count), 2, 11);
+    if (next !== getSliderLevels(mode, channel)) clearLevelGroups(sliderGroupKey(mode, channel));
+    sliderLevels[mode + ':' + channel] = next;
+    if (window.Platform && window.Platform.storage) window.Platform.storage.setItem('drawcolor-slider-levels', JSON.stringify(sliderLevels));
+  }
+  function loadSliderLevels() {
+    try {
+      var stored = JSON.parse(window.Platform.storage.getItem('drawcolor-slider-levels') || '{}');
+      Object.keys(stored).forEach(function (key) {
+        var parts = key.split(':');
+        var count = stored[key];
+        if (parts.length === 2 && MODES[parts[0]] && MODES[parts[0]].channels.some(function (ch) {return ch.key === parts[1];}) && Number.isInteger(count) && count >= 2 && count <= 11) sliderLevels[key] = count;
+      });
+    } catch (e) { /* start with continuous channels */ }
+  }
+  function sliderLevelSample(channel, ratio, levels, groups) {
+    if (!Number.isFinite(ratio)) return null;
+    var selection = groupedLevelSelection(ratio, levels, groups);
+    return {value:valueFromRatio(channel, selection.t), position:selection.position, index:selection.index};
+  }
+
   let sliderRows = [];      // { channel, track, thumb, input, gradCtx }
   let sliderDragging = null;
 
   function buildSliders() {
     const host = document.getElementById('sliderList');
+    sliderRows.forEach(function (entry) { if (entry.groupUI) entry.groupUI.dispose(); });
     host.innerHTML = '';
     sliderRows = [];
 
@@ -221,10 +449,39 @@ window.Panels = (function () {
       input.className = 'num-field';
       input.setAttribute('aria-label', I18N.t('slider.channelValue', { ch: ch.label }));
 
-      row.append(label, track, input);
-      host.appendChild(row);
+      const levels = document.createElement('div');
+      levels.className = 'slider-levels';
+      const count = document.createElement('span');
+      count.className = 'slider-level-count';
+      count.setAttribute('aria-live', 'polite');
+      const stepper = document.createElement('div');
+      stepper.className = 'bw-stepper slider-level-stepper';
+      const minus = document.createElement('button');
+      const plus = document.createElement('button');
+      minus.type = plus.type = 'button';
+      minus.textContent = '−'; plus.textContent = '+';
+      const context = S.state.sliderMode + ' · ' + ch.label;
+      minus.setAttribute('aria-label', I18N.t('slider.fewerLevels', {ch:context}));
+      plus.setAttribute('aria-label', I18N.t('slider.moreLevels', {ch:context}));
+      minus.dataset.delta = '-1'; plus.dataset.delta = '1';
+      stepper.append(minus, plus);
+      levels.append(count, stepper);
+      row.append(label, track, input, levels);
+      const block = document.createElement('div');
+      block.className = 'slider-block'; block.appendChild(row);
+      host.appendChild(block);
 
-      const entry = { channel: ch, track, thumb, input, gradCtx: grad.getContext('2d') };
+      const entry = { channel: ch, mode: S.state.sliderMode, track, thumb, input, count, minus, plus, gradCtx: grad.getContext('2d') };
+      [minus, plus].forEach(function (button) {
+        button.addEventListener('click', function () {
+          setSliderLevels(entry.mode, ch.key, getSliderLevels(entry.mode, ch.key) + Number(button.dataset.delta));
+          refreshSliders();
+        });
+      });
+      entry.groupId = sliderGroupKey(entry.mode, ch.key);
+      entry.groupUI = createLevelGroupUI(track, block, function () {
+        return {id:entry.groupId, count:getSliderLevels(entry.mode, ch.key), precision:(ch.max - ch.min) / ch.step};
+      }, refreshSliders);
       sliderRows.push(entry);
 
       wireSliderTrack(entry);
@@ -251,7 +508,12 @@ window.Panels = (function () {
   function valueFromPointer(entry, clientX) {
     const rect = entry.track.getBoundingClientRect();
     if (!rect.width) return null;
-    return valueFromRatio(entry.channel, (clientX - rect.left) / rect.width);
+    const count = getSliderLevels(entry.mode, entry.channel.key);
+    const selection = groupedLevelSelection((clientX - rect.left) / rect.width, count, getLevelGroups(entry.groupId));
+    if (selection.index !== null) selectedLevelCells[entry.groupId] = selection.index;
+    const value = valueFromRatio(entry.channel, selection.t);
+    entry.groupUI.refresh();
+    return value;
   }
 
   function quantize(raw, ch) {
@@ -279,20 +541,29 @@ window.Panels = (function () {
     return true;
   }
 
-  function commitChannel(entry, value) {
-    applyChannel(S.state.sliderMode, entry.channel.key, value);
+  function commitChannel(entry, value, exact) {
+    if (value === null || !isFinite(value)) return;
+    const ch = entry.channel, count = getSliderLevels(entry.mode, ch.key);
+    if (!exact && count <= 10) {
+      const stops = levelStops(count, getLevelGroups(entry.groupId));
+      const stop = stops[nearestLevelStop(stops, (value - ch.min) / (ch.max - ch.min))];
+      value = valueFromRatio(ch, stop.t);
+    }
+    applyChannel(entry.mode, ch.key, value);
+    if (entry.groupUI) entry.groupUI.refresh();
   }
 
   function wireSliderTrack(entry) {
     entry.track.addEventListener('pointerdown', (evt) => {
+      if (evt.button !== undefined && evt.button !== 0) return;
       sliderDragging = entry;
       entry.track.setPointerCapture(evt.pointerId);
-      commitChannel(entry, valueFromPointer(entry, evt.clientX));
+      commitChannel(entry, valueFromPointer(entry, evt.clientX), true);
     });
 
     entry.track.addEventListener('pointermove', (evt) => {
       if (sliderDragging !== entry) return;
-      commitChannel(entry, valueFromPointer(entry, evt.clientX));
+      commitChannel(entry, valueFromPointer(entry, evt.clientX), true);
     });
 
     const end = (evt) => {
@@ -303,14 +574,32 @@ window.Panels = (function () {
     };
     entry.track.addEventListener('pointerup', end);
     entry.track.addEventListener('pointercancel', end);
+    entry.track.addEventListener('lostpointercapture', end);
 
     entry.track.addEventListener('keydown', (evt) => {
       const ch = entry.channel;
       const cur = readVals()[ch.key];
-      const big = (ch.max - ch.min) / 10;
+      const levels = getSliderLevels(entry.mode, ch.key);
+      if (levels <= 10) {
+        const stops = levelStops(levels, getLevelGroups(entry.groupId));
+        let index = nearestLevelStop(stops, (cur - ch.min) / (ch.max - ch.min));
+        if (['ArrowRight', 'ArrowUp', 'PageUp'].indexOf(evt.key) >= 0) index++;
+        else if (['ArrowLeft', 'ArrowDown', 'PageDown'].indexOf(evt.key) >= 0) index--;
+        else if (evt.key === 'Home') index = 0;
+        else if (evt.key === 'End') index = stops.length - 1;
+        else return;
+        evt.preventDefault();
+        const stop = stops[C.clamp(index, 0, stops.length - 1)];
+        selectedLevelCells[entry.groupId] = stop.index;
+        commitChannel(entry, valueFromRatio(ch, stop.t), true);
+        S.pushHistory();
+        return;
+      }
+      const step = levels <= 10 ? (ch.max - ch.min) / (levels - 1) : ch.step;
+      const big = levels <= 10 ? step : (ch.max - ch.min) / 10;
       let next = null;
-      if (evt.key === 'ArrowRight' || evt.key === 'ArrowUp') next = cur + ch.step;
-      else if (evt.key === 'ArrowLeft' || evt.key === 'ArrowDown') next = cur - ch.step;
+      if (evt.key === 'ArrowRight' || evt.key === 'ArrowUp') next = cur + step;
+      else if (evt.key === 'ArrowLeft' || evt.key === 'ArrowDown') next = cur - step;
       else if (evt.key === 'PageUp') next = cur + big;
       else if (evt.key === 'PageDown') next = cur - big;
       else if (evt.key === 'Home') next = ch.min;
@@ -343,6 +632,8 @@ window.Panels = (function () {
       const num = parseFloat(raw);
       if (!isFinite(num)) { refreshSliders(); return; }
       commitChannel(entry, quantize(num, ch));
+      refreshSliders();
+      entry.input.value = entry.lastValid;
       S.pushHistory();
     };
 
@@ -360,24 +651,38 @@ window.Panels = (function () {
       const ch = entry.channel;
       const value = vals[ch.key];
 
+      const levels = getSliderLevels(entry.mode, ch.key);
+      const countText = levels > 10 ? '∞' : String(levels);
+      if (entry.count.textContent !== countText) entry.count.textContent = countText;
+      const description = levels > 10 ? I18N.t('mix.continuous') : I18N.t('slider.levelCount', {n:levels});
+      entry.count.title = description;
+      entry.count.setAttribute('aria-label', description);
+      entry.minus.disabled = levels <= 2;
+      entry.plus.disabled = levels >= 11;
+      entry.track.classList.toggle('is-discrete', levels <= 10);
+
       // gradiente do canal: varia só esse canal, mantendo os outros
       const g = entry.gradCtx;
       for (let x = 0; x < 256; x++) {
         const t = x / 255;
-        const sample = ch.min + t * (ch.max - ch.min);
+        const sample = sliderLevelSample(ch, t, levels, getLevelGroups(entry.groupId)).value;
         g.fillStyle = S.displayCss(mode.toRgb({ ...vals, [ch.key]: sample }));
         g.fillRect(x, 0, 1, 1);
       }
 
-      const pct = ((value - ch.min) / (ch.max - ch.min)) * 100;
-      entry.thumb.style.left = C.clamp(pct, 0, 100) + '%';
+      drawLevelDividers(g, 256, 1, levels, getLevelGroups(entry.groupId));
+      const ratio = (value - ch.min) / (ch.max - ch.min);
+      const groups = getLevelGroups(entry.groupId);
+      paintTrackSelection(entry.track, entry.thumb, selectionForValue(ratio, levels, groups), levels, groups);
 
       const shown = value.toFixed(ch.decimals);
       if (document.activeElement !== entry.input) entry.input.value = shown;
       entry.lastValid = shown;
 
       entry.track.setAttribute('aria-valuenow', shown);
+      entry.groupUI.refresh();
     });
+    refreshResetLevels();
   }
 
   /* ================= Rampa de valores B/W ================= */
@@ -396,28 +701,42 @@ window.Panels = (function () {
   }
 
   function initBwRamp() {
-    document.getElementById('bwMinus').addEventListener('click', () => {
+    ['bw', 'mixBw'].forEach(initBwRampInstance);
+  }
+
+  function initBwRampInstance(prefix) {
+    document.getElementById(prefix + 'Minus').addEventListener('click', () => {
       S.setBwSteps(S.state.bwSteps - 1);
     });
-    document.getElementById('bwPlus').addEventListener('click', () => {
+    document.getElementById(prefix + 'Plus').addEventListener('click', () => {
       S.setBwSteps(S.state.bwSteps + 1);
     });
-    document.getElementById('bwGroupPlus').addEventListener('click', () => {
+    document.getElementById(prefix + 'GroupPlus').addEventListener('click', () => {
       if (bwSelected === null) return;
       S.setBwGroup(bwSelected, S.getBwGroup(bwSelected) + 1);
     });
-    document.getElementById('bwGroupMinus').addEventListener('click', () => {
+    document.getElementById(prefix + 'GroupMinus').addEventListener('click', () => {
       if (bwSelected === null) return;
       S.setBwGroup(bwSelected, S.getBwGroup(bwSelected) - 1);
     });
-    document.getElementById('bwGroupReset').addEventListener('click', () => {
+    document.getElementById(prefix + 'GroupReset').addEventListener('click', () => {
       S.resetBwGroups();
     });
+    if (window.Platform && window.Platform.observeResize) {
+      window.Platform.observeResize(document.getElementById(prefix + 'GroupTrack'), function () {
+        refreshBwGroupControls(S.state.bwSteps, prefix);
+      });
+    }
   }
 
   function refreshBwRamp() {
-    const block = document.getElementById('bwBlock');
-    const isBw = S.state.sliderMode === 'B/W';
+    refreshBwRampInstance('bw');
+    refreshBwRampInstance('mixBw');
+  }
+
+  function refreshBwRampInstance(prefix) {
+    const block = document.getElementById(prefix + 'Block');
+    const isBw = prefix === 'mixBw' || S.state.sliderMode === 'B/W';
     block.hidden = !isBw;
     if (!isBw) return;
 
@@ -425,7 +744,7 @@ window.Panels = (function () {
     if (bwSelectedSteps !== S.state.bwSteps) bwSelected = null;
 
     const ramp = S.getBwRamp();
-    const host = document.getElementById('bwRamp');
+    const host = document.getElementById(prefix + 'Ramp');
     const cur = S.getRgb();
     const currentLevel = (cur.r === cur.g && cur.g === cur.b)
       ? Math.round(cur.r / 255 * 100)
@@ -483,11 +802,11 @@ window.Panels = (function () {
       host.appendChild(cell);
     });
 
-    document.getElementById('bwCount').textContent = ramp.length;
-    document.getElementById('bwMinus').disabled = S.state.bwSteps <= S.BW_MIN;
-    document.getElementById('bwPlus').disabled = S.state.bwSteps >= S.BW_MAX;
+    document.getElementById(prefix + 'Count').textContent = ramp.length;
+    document.getElementById(prefix + 'Minus').disabled = S.state.bwSteps <= S.BW_MIN;
+    document.getElementById(prefix + 'Plus').disabled = S.state.bwSteps >= S.BW_MAX;
 
-    refreshBwGroupControls(ramp.length);
+    refreshBwGroupControls(ramp.length, prefix);
   }
 
   /**
@@ -498,20 +817,21 @@ window.Panels = (function () {
    * a conta é simples — centro do quadrado menos metade da largura do
    * controle, preso às bordas da trilha para não sair da régua nos extremos.
    */
-  function refreshBwGroupControls(count) {
-    const ctl = document.getElementById('bwGroupCtl');
-    const track = document.getElementById('bwGroupTrack');
-    document.getElementById('bwGroupReset').disabled = !S.hasBwGroups();
+  function refreshBwGroupControls(count, prefix) {
+    const ctl = document.getElementById(prefix + 'GroupCtl');
+    const track = document.getElementById(prefix + 'GroupTrack');
+    document.getElementById(prefix + 'GroupReset').disabled = !S.hasBwGroups();
+    track.parentElement.hidden = !groupEditing;
 
-    if (bwSelected === null || bwSelected >= count) {
+    if (!groupEditing || bwSelected === null || bwSelected >= count) {
       ctl.hidden = true;
       return;
     }
 
     const k = S.getBwGroup(bwSelected);
-    document.getElementById('bwGroupCount').textContent = k;
-    document.getElementById('bwGroupPlus').disabled = k >= S.bwGroupMax(bwSelected);
-    document.getElementById('bwGroupMinus').disabled = k <= 1;
+    document.getElementById(prefix + 'GroupCount').textContent = k;
+    document.getElementById(prefix + 'GroupPlus').disabled = k >= S.bwGroupMax(bwSelected);
+    document.getElementById(prefix + 'GroupMinus').disabled = k <= 1;
 
     ctl.hidden = false;
     const trackW = track.clientWidth;
@@ -832,6 +1152,119 @@ window.Panels = (function () {
 
   /* ================= Mixer — barras estilo Coolorus ================= */
 
+  var mixerPair = null;
+  var activeMixer = null;
+  var mixerSteps = {};
+  var MIXER_KEYS = ['pair', 'blender', 'shades', 'scheme'];
+
+  function mixerMode(key) {
+    var select = document.getElementById(key + 'Mode');
+    return select ? select.value : '';
+  }
+
+  function stepsKey(key, mode) { return key + ':' + (mode === undefined ? mixerMode(key) : mode); }
+  function getMixerSteps(key, mode) { return mixerSteps[stepsKey(key, mode)] || 11; }
+
+  function setMixerSteps(key, count, mode) {
+    if (MIXER_KEYS.indexOf(key) < 0 || !Number.isFinite(count)) return;
+    const next = C.clamp(Math.round(count), 2, 11);
+    if (next !== getMixerSteps(key, mode)) clearLevelGroups(mixerGroupKey(key, mode));
+    mixerSteps[stepsKey(key, mode)] = next;
+    if (window.Platform && window.Platform.storage) {
+      window.Platform.storage.setItem('drawcolor-mixer-steps', JSON.stringify(mixerSteps));
+    }
+  }
+
+  function loadMixerSteps() {
+    try {
+      var stored = JSON.parse(window.Platform.storage.getItem('drawcolor-mixer-steps') || '{}');
+      Object.keys(stored).forEach(function (key) {
+        var count = stored[key];
+        if (MIXER_KEYS.indexOf(key.split(':')[0]) >= 0 && Number.isInteger(count) && count >= 2 && count <= 11) mixerSteps[key] = count;
+      });
+    } catch (e) { /* defaults remain continuous */ }
+  }
+
+  function mixerSelection(t, count) {
+    t = C.clamp(t, 0, 1);
+    if (count > 10) return {t:t, position:t, index:null};
+    var index = Math.min(count - 1, Math.floor(t * count));
+    return {t:index / (count - 1), position:(index + 0.5) / count, index:index};
+  }
+
+  function refreshMixerSteps() {
+    MIXER_KEYS.forEach(function (key) {
+      var count = getMixerSteps(key);
+      var label = document.getElementById(key + 'ColorCount');
+      if (label) label.textContent = count > 10 ? I18N.t('mix.continuous') : I18N.t('mix.colorCount', {n:count});
+      document.querySelectorAll('.mix-color-stepper button[data-mixer="' + key + '"]').forEach(function (button) {
+        button.disabled = Number(button.dataset.delta) < 0 ? count <= 2 : count >= 11;
+      });
+      var track = document.getElementById(key === 'pair' ? 'mixPairTrack' : key + 'Track');
+      if (track) {
+        var groups = getLevelGroups(mixerGroupKey(key));
+        var ratio = Number(track.getAttribute('aria-valuenow')) / 100;
+        paintTrackSelection(track, track.querySelector('.mix-strip-thumb'), selectionForValue(ratio, count, groups), count, groups);
+      }
+      if (mixerGroupUIs[key]) mixerGroupUIs[key].refresh();
+    });
+    refreshResetLevels();
+  }
+
+  function syncMixerPair(reason) {
+    if (activeMixer && activeMixer.key === 'pair') return activeMixer.base;
+    if (!mixerPair || ['color', 'slider', 'host', 'peer', 'swap', 'init', 'host-background', 'background', 'gesture-end'].indexOf(reason) >= 0 || (reason && reason.indexOf('mixer-') === 0)) {
+      mixerPair = {primary:S.getRgb(), secondary:{...S.state.background}};
+    }
+    return mixerPair;
+  }
+
+  // Pure color mapping shared by rendering and tests. The base is frozen per gesture.
+  function mixerColorAt(key, t, base, mode) {
+    if (key === 'pair') return C.mixRgb(base.primary, base.secondary, t);
+    var h = base.h, s = base.s, v = base.v;
+    if (key === 'blender') {
+      if (mode === 'saturation') s = t * 100;
+      else if (mode === 'brightness') v = t * 100;
+      else h += (t - 0.5) * 120;
+    } else if (key === 'shades') {
+      if (mode === 'tints') { s = (1 - t) * 100; v = 100; }
+      else if (mode === 'tones') { s = t * 100; v = 100 - t * 50; }
+      else v = t * 100;
+    } else h = (h + t * 360) % 360;
+    return C.hsvToRgb(h, s, v);
+  }
+
+  function drawMixerCanvas(key, canvasId) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    var base = activeMixer && activeMixer.key === key ? activeMixer.base : key === 'pair' ? syncMixerPair() : S.getHsv();
+    var mode = mixerMode(key), count = getMixerSteps(key);
+    var ctx = canvas.getContext('2d');
+    var w = canvas.width = Math.max(2, canvas.offsetWidth || 300);
+    for (var x = 0; x < w; x++) {
+      var sample = groupedLevelSelection(x / (w - 1), count, getLevelGroups(mixerGroupKey(key)));
+      ctx.fillStyle = S.displayCss(mixerColorAt(key, sample.t, base, mode));
+      ctx.fillRect(x, 0, 1, canvas.height);
+    }
+    // The fill changes abruptly at the same boundaries used by hit-testing.
+    drawLevelDividers(ctx, w, canvas.height, count, getLevelGroups(mixerGroupKey(key)));
+  }
+
+  function samplePair(t, pair) {
+    pair = pair || syncMixerPair();
+    t = C.clamp(t, 0, 1);
+    var rgb = C.mixRgb(pair.primary, pair.secondary, t);
+    var thumb = document.getElementById('mixPairThumb');
+    var track = document.getElementById('mixPairTrack');
+    var groups = getLevelGroups(mixerGroupKey('pair'));
+    paintTrackSelection(track, thumb, selectionForValue(t, getMixerSteps('pair'), groups), getMixerSteps('pair'), groups);
+    if (track) track.setAttribute('aria-valuenow', String(Math.round(t * 100)));
+    S.setRgb(rgb.r, rgb.g, rgb.b, {reason:'mix-pair', relock:true});
+  }
+
+  function sampleValue(t) { MODES['B/W'].write({w:C.clamp(t, 0, 1) * 100}); }
+
   function initMixer() {
     // Toggle de visibilidade das barras
     document.querySelectorAll('.mix-dot').forEach(function (dot) {
@@ -850,14 +1283,35 @@ window.Panels = (function () {
     // amostragem; a amostragem em si é uma função pura de (t, modo).
     initTrack('blenderTrack', 'blenderThumb', function (t, base) {
       sampleBlender(t, document.getElementById('blenderMode').value, base);
-    });
+    }, null, 'blender');
 
     initTrack('shadesTrack', 'shadesThumb', function (t, base) {
       sampleShades(t, document.getElementById('shadesMode').value, base);
-    });
+    }, null, 'shades');
 
     initTrack('schemeTrack', 'schemeThumb', function (t, base) {
       sampleScheme(t, base);
+    }, null, 'scheme');
+
+    initTrack('mixValueTrack', 'mixValueThumb', sampleValue);
+    initTrack('mixPairTrack', 'mixPairThumb', samplePair, function () {
+      var pair = syncMixerPair();
+      return { primary: { ...pair.primary }, secondary: { ...pair.secondary } };
+    }, 'pair');
+    document.getElementById('mixPairPrimary').addEventListener('click', function () {
+      samplePair(0); S.pushHistory(); syncMixerPair('gesture-end'); refreshMixer();
+    });
+    document.getElementById('mixPairSecondary').addEventListener('click', function () {
+      samplePair(1); S.pushHistory(); syncMixerPair('gesture-end'); refreshMixer();
+    });
+
+    loadMixerSteps();
+    document.querySelectorAll('.mix-color-stepper button').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var key = button.dataset.mixer;
+        setMixerSteps(key, getMixerSteps(key) + Number(button.dataset.delta));
+        refreshMixer();
+      });
     });
 
     // Auto sample: ao mudar a cor, amostra automaticamente a posição do thumb
@@ -892,25 +1346,47 @@ window.Panels = (function () {
     if (mode === 'saturation') { s = t * 100; v = hsv.v; }
     else if (mode === 'brightness') { s = hsv.s; v = t * 100; }
     else { h = hsv.h + (t - 0.5) * 120; s = hsv.s; v = hsv.v; }
-    S.setHsv({ h: h, s: s, v: v }, { relock: true });
+    S.setHsv({ h: h, s: s, v: v }, { relock: true, reason: 'mixer-blender' });
   }
 
   function sampleShades(t, mode, base) {
     var hsv = base || S.getHsv();
-    if (mode === 'tints') S.setHsv({ h: hsv.h, s: (1 - t) * 100, v: 100 }, { relock: true });
-    else if (mode === 'tones') S.setHsv({ h: hsv.h, s: t * 100, v: 100 - t * 50 }, { relock: true });
-    else S.setHsv({ h: hsv.h, s: hsv.s, v: t * 100 }, { relock: true });
+    if (mode === 'tints') S.setHsv({ h: hsv.h, s: (1 - t) * 100, v: 100 }, { relock: true, reason: 'mixer-shades' });
+    else if (mode === 'tones') S.setHsv({ h: hsv.h, s: t * 100, v: 100 - t * 50 }, { relock: true, reason: 'mixer-shades' });
+    else S.setHsv({ h: hsv.h, s: hsv.s, v: t * 100 }, { relock: true, reason: 'mixer-shades' });
   }
 
   function sampleScheme(t, base) {
     var hsv = base || S.getHsv();
-    S.setHsv({ h: (hsv.h + t * 360) % 360, s: hsv.s, v: hsv.v }, { relock: true });
+    S.setHsv({ h: (hsv.h + t * 360) % 360, s: hsv.s, v: hsv.v }, { relock: true, reason: 'mixer-scheme' });
   }
 
-  function initTrack(trackId, thumbId, onSample) {
+  function initTrack(trackId, thumbId, onSample, getBase, mixerKey) {
     var track = document.getElementById(trackId);
     var thumb = document.getElementById(thumbId);
     var dragging = false;
+    if (mixerKey) {
+      var bar = track.parentElement;
+      mixerGroupUIs[mixerKey] = createLevelGroupUI(track, bar.parentElement, function () {
+        return {id:mixerGroupKey(mixerKey), count:getMixerSteps(mixerKey)};
+      }, refreshMixer, bar.nextSibling);
+    }
+    track.setAttribute('role', 'slider');
+    track.setAttribute('tabindex', '0');
+    track.setAttribute('aria-valuemin', '0');
+    track.setAttribute('aria-valuemax', '100');
+    track.setAttribute('aria-valuenow', '50');
+
+    function sample(t) {
+      var selection = mixerKey ? groupedLevelSelection(t, getMixerSteps(mixerKey), getLevelGroups(mixerGroupKey(mixerKey))) : {t:t, position:t};
+      if (mixerKey && selection.index !== null) selectedLevelCells[mixerGroupKey(mixerKey)] = selection.index;
+      t = selection.t;
+      if (mixerKey) paintTrackSelection(track, thumb, selection, getMixerSteps(mixerKey), getLevelGroups(mixerGroupKey(mixerKey)));
+      else thumb.style.left = (selection.position * 100) + '%';
+      track.setAttribute('aria-valuenow', String(Math.round(t * 100)));
+      onSample(t, base);
+      if (mixerKey) { paintTrackSelection(track, thumb, selection, getMixerSteps(mixerKey), getLevelGroups(mixerGroupKey(mixerKey))); mixerGroupUIs[mixerKey].refresh(); }
+    }
 
     function getT(evt) {
       var rect = track.getBoundingClientRect();
@@ -924,18 +1400,18 @@ window.Panels = (function () {
     var base = null;
 
     track.addEventListener('pointerdown', function (evt) {
+      if (evt.button !== undefined && evt.button !== 0) return;
       dragging = true;
-      base = S.getHsv();
+      base = getBase ? getBase() : S.getHsv();
+      if (mixerKey) activeMixer = {key:mixerKey, base:base};
       track.setPointerCapture(evt.pointerId);
       var t = getT(evt);
-      thumb.style.left = (t * 100) + '%';
-      onSample(t, base);
+      sample(t);
     });
     track.addEventListener('pointermove', function (evt) {
       if (!dragging) return;
       var t = getT(evt);
-      thumb.style.left = (t * 100) + '%';
-      onSample(t, base);
+      sample(t);
     });
     /**
      * O histórico é gravado uma vez, ao soltar: o arraste inteiro vale uma
@@ -946,21 +1422,93 @@ window.Panels = (function () {
     function end(evt) {
       if (!dragging) return;
       dragging = false;
+      if (mixerKey) activeMixer = null;
       base = null;
       if (track.hasPointerCapture(evt.pointerId)) track.releasePointerCapture(evt.pointerId);
       S.pushHistory();
+      if (mixerKey) { syncMixerPair('gesture-end'); refreshMixer(); }
     }
 
     track.addEventListener('pointerup', end);
     track.addEventListener('pointercancel', end);
+    track.addEventListener('lostpointercapture', end);
+    track.addEventListener('keydown', function (evt) {
+      var t = Number(track.getAttribute('aria-valuenow')) / 100;
+      var steps = mixerKey ? getMixerSteps(mixerKey) : 11;
+      var keyboardStops = steps <= 10 ? levelStops(steps, getLevelGroups(mixerGroupKey(mixerKey))) : [];
+      if (keyboardStops.length) {
+        var index = nearestLevelStop(keyboardStops, t);
+        if (evt.key === 'Home') index = 0;
+        else if (evt.key === 'End') index = keyboardStops.length - 1;
+        else if (evt.key === 'ArrowRight' || evt.key === 'ArrowUp') index++;
+        else if (evt.key === 'ArrowLeft' || evt.key === 'ArrowDown') index--;
+        else return;
+        evt.preventDefault();
+        base = getBase ? getBase() : S.getHsv();
+        activeMixer = {key:mixerKey, base:base};
+        sample(keyboardStops[C.clamp(index, 0, keyboardStops.length - 1)].position);
+        activeMixer = null; base = null; S.pushHistory();
+        syncMixerPair('gesture-end'); refreshMixer();
+        return;
+      }
+      var increment = steps <= 10 ? 1 / (steps - 1) : 0.01;
+      if (evt.key === 'Home') t = 0;
+      else if (evt.key === 'End') t = 1;
+      else if (evt.key === 'ArrowRight' || evt.key === 'ArrowUp') t += increment;
+      else if (evt.key === 'ArrowLeft' || evt.key === 'ArrowDown') t -= increment;
+      else return;
+      evt.preventDefault();
+      base = getBase ? getBase() : S.getHsv();
+      if (mixerKey) activeMixer = {key:mixerKey, base:base};
+      sample(C.clamp(t, 0, 1));
+      if (mixerKey) activeMixer = null;
+      base = null;
+      S.pushHistory();
+      if (mixerKey) { syncMixerPair('gesture-end'); refreshMixer(); }
+    });
   }
 
   function refreshMixer() {
+    refreshMixerSteps();
     refreshHistoryBar();
+    refreshValueCanvas();
+    refreshPairCanvas();
     refreshBlenderCanvas();
     refreshShadesCanvas();
     refreshSwatchesBar();
     refreshSchemeCanvas();
+  }
+
+  function refreshValueCanvas() {
+    var canvas = document.getElementById('mixValueCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var w = canvas.width = Math.max(2, canvas.offsetWidth || 300);
+    for (var x = 0; x < w; x++) {
+      var g = Math.round(x / (w - 1) * 255);
+      ctx.fillStyle = 'rgb(' + g + ',' + g + ',' + g + ')';
+      ctx.fillRect(x, 0, 1, 28);
+    }
+    var level = MODES['B/W'].fromRgb(S.getRgb()).w;
+    document.getElementById('mixValueThumb').style.left = level + '%';
+    document.getElementById('mixValueTrack').setAttribute('aria-valuenow', String(level));
+    document.getElementById('mixValueNumber').textContent = level;
+  }
+
+  function refreshPairCanvas() {
+    drawMixerCanvas('pair', 'mixPairCanvas');
+    if (!activeMixer || activeMixer.key !== 'pair') {
+      var groups = getLevelGroups(mixerGroupKey('pair'));
+      paintTrackSelection(document.getElementById('mixPairTrack'), document.getElementById('mixPairThumb'), selectionForValue(0, getMixerSteps('pair'), groups), getMixerSteps('pair'), groups);
+      document.getElementById('mixPairTrack').setAttribute('aria-valuenow', '0');
+    }
+    // Endpoint chips always reflect the actual selected colors.
+    var primary = document.getElementById('mixPairPrimary');
+    var secondary = document.getElementById('mixPairSecondary');
+    primary.style.background = S.displayCss(S.getRgb());
+    secondary.style.background = S.displayCss(S.state.background);
+    primary.title = '#' + C.rgbToHex(S.getRgb().r, S.getRgb().g, S.getRgb().b).replace(/^#/, '');
+    secondary.title = '#' + C.rgbToHex(S.state.background.r, S.state.background.g, S.state.background.b).replace(/^#/, '');
   }
 
   function refreshHistoryBar() {
@@ -991,45 +1539,8 @@ window.Panels = (function () {
     }
   }
 
-  function refreshBlenderCanvas() {
-    var canvas = document.getElementById('blenderCanvas');
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    var w = canvas.width = canvas.offsetWidth || 300;
-    var hsv = S.getHsv();
-    var mode = document.getElementById('blenderMode').value;
-
-    for (var x = 0; x < w; x++) {
-      var t = x / (w - 1);
-      var h = hsv.h, s = hsv.s, v = hsv.v;
-      if (mode === 'saturation') s = t * 100;
-      else if (mode === 'brightness') v = t * 100;
-      else h = hsv.h + (t - 0.5) * 120;
-      var rgb = C.hsvToRgb(h, s, v);
-      ctx.fillStyle = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
-      ctx.fillRect(x, 0, 1, 28);
-    }
-  }
-
-  function refreshShadesCanvas() {
-    var canvas = document.getElementById('shadesCanvas');
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    var w = canvas.width = canvas.offsetWidth || 300;
-    var hsv = S.getHsv();
-    var mode = document.getElementById('shadesMode').value;
-
-    for (var x = 0; x < w; x++) {
-      var t = x / (w - 1);
-      var h = hsv.h, s = hsv.s, v;
-      if (mode === 'shades') { v = t * 100; }
-      else if (mode === 'tints') { s = (1 - t) * 100; v = 100; }
-      else { s = t * 100; v = 100 - t * 50; }
-      var rgb = C.hsvToRgb(h, s, v);
-      ctx.fillStyle = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
-      ctx.fillRect(x, 0, 1, 28);
-    }
-  }
+  function refreshBlenderCanvas() { drawMixerCanvas('blender', 'blenderCanvas'); }
+  function refreshShadesCanvas() { drawMixerCanvas('shades', 'shadesCanvas'); }
 
   function refreshSwatchesBar() {
     var host = document.getElementById('swatchesBar');
@@ -1052,21 +1563,7 @@ window.Panels = (function () {
     }
   }
 
-  function refreshSchemeCanvas() {
-    var canvas = document.getElementById('schemeCanvas');
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    var w = canvas.width = canvas.offsetWidth || 300;
-    var hsv = S.getHsv();
-
-    for (var x = 0; x < w; x++) {
-      var t = x / (w - 1);
-      var hue = (hsv.h + t * 360) % 360;
-      var rgb = C.hsvToRgb(hue, hsv.s, hsv.v);
-      ctx.fillStyle = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
-      ctx.fillRect(x, 0, 1, 28);
-    }
-  }
+  function refreshSchemeCanvas() { drawMixerCanvas('scheme', 'schemeCanvas'); }
 
   function feedMixerFromWheel() {
     var visible = window.Docking
@@ -1099,6 +1596,7 @@ window.Panels = (function () {
   /* ================= Refresh geral ================= */
 
   function refreshAll(reason) {
+    syncMixerPair(reason);
     if (reason === 'mode') { refreshBwRamp(); return; }
     refreshSliders();
     refreshHex();
@@ -1140,7 +1638,10 @@ window.Panels = (function () {
     let h = 0;
     if (activePane.id === 'paneSliders') {
       for (const child of activePane.children) {
-        h += child.offsetHeight || 0;
+        if (child.offsetHeight > 0) {
+          const childStyle = getComputedStyle(child);
+          h += child.offsetHeight + (parseFloat(childStyle.marginTop) || 0) + (parseFloat(childStyle.marginBottom) || 0);
+        }
       }
       // Soma os gaps e padding
       const style = getComputedStyle(activePane);
@@ -1179,9 +1680,12 @@ window.Panels = (function () {
     buildSliders();
     refreshBwRamp();
     refreshLimit();
+    refreshMixerSteps();
   }
 
   function init() {
+    loadSliderLevels();
+    loadLevelGroups();
     buildModeButtons();
     buildSliders();
     initHex();
@@ -1190,6 +1694,13 @@ window.Panels = (function () {
     initMixer();
     initBwRamp();
     initLimit();
+    document.getElementById('groupsToggleBtn').addEventListener('click', function () { setGroupEditing(!groupEditing); });
+    setGroupEditing(false);
+    document.getElementById('resetLevelsBtn').addEventListener('click', function () {
+      resetLevels();
+      refreshSliders();
+      refreshMixer();
+    });
 
     let measureTimer = null;
     S.subscribe((st, reason) => {
@@ -1211,7 +1722,7 @@ window.Panels = (function () {
     // o triplo guardado, o mapeamento de posição do trilho para valor e a
     // amostragem das barras do mixer
     applyChannel, readVals, dropLatchIfExternal, ORIGENS_EXTERNAS,
-    resolveVals, sameRgb, quantize, valueFromRatio,
-    sampleBlender, sampleShades, sampleScheme
+    resolveVals, sameRgb, quantize, valueFromRatio, getSliderLevels, setSliderLevels, sliderLevelSample, resetLevels, hasCustomLevels, setGroupEditing, isGroupEditing, getLevelGroups, getLevelGroup, setLevelGroup, groupedLevelSelection, levelGroupMax, levelStops, sliderGroupKey, mixerGroupKey,
+    sampleBlender, sampleShades, sampleScheme, samplePair, sampleValue, syncMixerPair, mixerSelection, getMixerSteps, setMixerSteps, mixerColorAt
   };
 })();

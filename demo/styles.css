@@ -2032,7 +2032,7 @@ html[data-tone="light"] .dial {
 .panel {
   --tab-h:    max(28px, calc(38 * var(--u)));
   --status-h: max(26px, calc(47 * var(--u)));
-  --row-h:    max(24px, calc(26 * var(--u)));
+  --row-h:    max(32px, calc(32 * var(--u)));
   --mode-h:   max(28px, calc(33 * var(--u)));
   --pad-x:    max(10px, calc(14 * var(--u)));
 
@@ -2048,22 +2048,22 @@ html[data-tone="light"] .dial {
    * do que os Sliders ocupam, nos mesmos tokens declarados acima.
    *
    *   2 × pane-pad-y   16u / 12px
-   *   3 × row-h        78u / 72px   (RGB, HSV, LAB — 3 canais)
+   *   3 × row-h        96u / 96px   (RGB, HSV, LAB — 3 canais)
    *   2 × slider-gap   20u / 10px
    *   1 × mode-gap      8u /  6px
    *   1 × mode-h       33u / 28px
    *   ------------------------------
-   *                   155u / 128px
+   *                   173u / 152px
    *
    * Qualquer valor acima disso vira banda vazia entre a linha MODE e a barra
    * de status, porque é --body-h que define essa distância. Era daí que vinha
-   * a margem: 199u contra 155u de conteúdo = 44u de vão.
+   * a margem: a reserva deve acompanhar os controles que realmente existem.
    *
    * A soma fica escrita à mão, e não em calc() com os tokens, porque cada
    * token é um max() e o CEF do CEP não aceita max() dentro de multiplicação
    * em calc(). Se mexer num token acima, refaça a conta aqui.
    */
-  --body-h:   max(128px, calc(155 * var(--u)));
+  --body-h:   max(152px, calc(173 * var(--u)));
 
   /**
    * Altura da área que escala: cabeçalho, swatches, roda e barra de valor.
@@ -2082,24 +2082,13 @@ html[data-tone="light"] .dial {
    * subia por cima da roda. Reservando a linha, a faixa de baixo cresce e a
    * roda nunca é invadida.
    */
-  --limit-h: max(24px, calc(30 * var(--u)));
+  --limit-h: max(44px, calc(52 * var(--u)));
 
   --top-h:   calc(608 * var(--u));
   --strip-h: calc(var(--limit-h) + var(--tab-h) + var(--body-h) + var(--status-h));
 
-  /**
-   * Onde a faixa de baixo começa.
-   *
-   * Estava ancorada pelo rodapé (`bottom`), e isso a deixava subir por cima da
-   * roda: a escala tem piso (MIN_SCALE), então a área de cima nunca mede menos
-   * que 608 × 0,55 ≈ 334px, e num painel baixo a soma das duas não cabe. O que
-   * não cabia era desenhado por cima — a faixa cobria o disco e os satélites.
-   *
-   * Com `max()` a faixa nunca sobe acima da área da roda, e num painel alto
-   * continua colada no rodapé, como antes. Quando não cabe, quem sobra é
-   * alcançado por rolagem (ver o shell de cada ambiente), não por sobreposição.
-   */
-  --strip-top: max(var(--top-h), calc(100% - var(--strip-h)));
+  /* Abas logo abaixo da roda, inclusive quando sobra altura no dock. */
+  --strip-top: var(--top-h);
 
   /**
    * A altura do painel passa a ser a soma das duas faixas, em vez das 907
@@ -2111,8 +2100,8 @@ html[data-tone="light"] .dial {
    * simplesmente migraria para cima das abas. Derivando a altura, --strip-top
    * cai exatamente em --top-h e não sobra vão em lugar nenhum.
    *
-   * Arrastar a borda (resize: both) continua funcionando; o espaço extra vai
-   * para cima das abas, que é o comportamento esperado de um painel esticado.
+   * Arrastar a borda (resize: both) continua funcionando; as abas acompanham
+   * a roda e o espaço extra fica depois do conteúdo.
    */
   height: calc(var(--top-h) + var(--strip-h));
 }
@@ -2120,20 +2109,20 @@ html[data-tone="light"] .dial {
 /**
  * Sem `:has()` — o CEF do CEP não suporta.
  *
- * O --body-h fica no valor genérico (max(158px, 199u)) e a margem entre
+ * O --body-h começa no valor genérico (max(152px, 173u)) e a margem entre
  * sliders e MODE é fixa em vez de auto. O buraco some porque o mode-row
  * não é mais empurrado para o fim do flex.
  */
 
 /**
  * CMYK tem 4 canais: a mesma conta com uma linha e um gap a mais.
- *   16 + 4×26 + 3×10 + 8 + 33 = 191u
- *   12 + 4×24 + 3×5  + 6 + 28 = 157px
+ *   16 + 4×32 + 3×10 + 8 + 33 = 215u
+ *   12 + 4×32 + 3×5  + 6 + 28 = 189px
  * `:has()` não existe no CEF do CEP; ali o CMYK aperta um pouco em vez de
  * abrir a banda vazia nos outros modos, que é o mal maior.
  */
 .panel.has-4ch {
-  --body-h: max(157px, calc(191 * var(--u)));
+  --body-h: max(189px, calc(215 * var(--u)));
 }
 
 /* ---------------- faixa de baixo ancorada pelo topo ---------------- */
@@ -2647,3 +2636,186 @@ html[data-tone="light"] .dial {
    (as margens usavam max(), que ele também não entende), ele vencia o
    `margin-left: auto` do ⤢ das abas e dos botões ☀/◐ da linha MODE, que
    deixavam de ir para a direita em todos os motores. */
+
+/* Mixer: shared value ramp and foreground/background interpolation. */
+.panel #mixBwBlock { height: auto; margin-top: 5px; }
+.mix-pair-row { display: flex; align-items: stretch; gap: 5px; }
+.mix-pair-row .mix-strip-track { flex: 1; min-width: 0; }
+.mix-pair-chip {
+  flex: 0 0 24px; width: 24px; padding: 0;
+  border: 1px solid var(--divider); border-radius: 2px; cursor: pointer;
+}
+.mix-value-readout { color: var(--text-dim); font-size: 10px; }
+.mix-value-readout b { color: var(--text); }
+.mix-strip-track:focus-visible, .mix-pair-chip:focus-visible {
+  outline: 2px solid var(--focus); outline-offset: 1px;
+}
+
+/* Place tabs directly after the scaled wheel area, including tall host panels. */
+.mix-color-row { display:flex; align-items:stretch; gap:6px; }
+.mix-color-row .mix-strip-track { flex:1; min-width:0; }
+.mix-color-stepper { flex:0 0 28px; }
+.mix-color-count { display:block; margin-top:3px; color:var(--text-dim); font-size:10px; }
+.mix-strip-track.is-discrete .mix-strip-thumb { width:2px; margin-left:-1px; }
+
+/* Limit row has its own breathing room, independent from wheel and tabs. */
+.panel:not(.limit-card) .limit-panel {
+  left:var(--pad-x); top:calc(var(--strip-top) + 8px); transform:none;
+  width:calc(100% - 2 * var(--pad-x)); max-width:none;
+  height:calc(var(--limit-h) - 16px); padding:0 8px;
+  border-radius:4px; gap:14px; justify-content:center;
+}
+.panel:not(.limit-card) .limit-panel-head { padding:0; border-right:none; gap:4px; }
+.panel:not(.limit-card) .limit-panel-rows { margin-left:0; gap:8px; }
+.panel:not(.limit-card) .limit-panel-rows .menu-row { gap:4px; }
+.panel:not(.limit-card) .limit-panel-rows select { width:54px; min-width:0; padding:1px 3px; }
+.panel:not(.limit-card) .limit-panel-rows .js-limit-hues { width:44px; }
+/* Each channel has its own level count; numeric fields remain visible. */
+.slider-levels { display:flex; flex:0 0 auto; align-items:center; gap:3px; height:100%; }
+.slider-level-count { min-width:14px; text-align:center; color:var(--text-dim); font-size:11px; }
+.slider-level-stepper { height:100%; }
+.slider-level-stepper button { width:22px; }
+.panel .slider-row .slider-levels { position:static; }
+.track.is-discrete .thumb { width:2px; margin-left:-1px; }
+
+/* Native checkbox keeps keyboard / screen reader behavior; the rail is visual. */
+.panel .limit-switch {
+  position:relative; display:inline-flex; flex:0 0 36px;
+  width:36px; height:20px; padding:0; margin:0; border:none; align-self:center;
+}
+.limit-switch input { position:absolute; left:0; top:0; width:100%; height:100%; opacity:0; margin:0; cursor:pointer; z-index:1; }
+.limit-switch-rail { position:relative; display:block; width:36px; height:20px; border-radius:10px; background:var(--divider); pointer-events:none; }
+.limit-switch-knob { position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:8px; background:var(--text-primary); transition:left .14s ease; }
+.limit-switch input:checked + .limit-switch-rail { background:var(--accent); }
+.limit-switch input:checked + .limit-switch-rail .limit-switch-knob { left:18px; }
+.limit-switch input:focus + .limit-switch-rail { outline:2px solid var(--focus); outline-offset:2px; }
+.panel.limit-card .limit-panel { align-items:center; }
+.panel.limit-card .limit-switch { flex-basis:auto; padding:0; border:none; }
+.panel.limit-card .limit-panel-rows { align-items:center; }
+.panel.limit-card .limit-panel-rows .menu-row { justify-content:center; }
+.panel .levels-reset-btn {
+  position:static; margin-left:auto; align-self:center; flex:0 0 auto;
+  width:max(22px, calc(28 * var(--u))); height:max(22px, calc(28 * var(--u)));
+  padding:0; border:1px solid var(--divider); border-radius:2px;
+  background:var(--surface-raised); color:var(--text-primary); font-size:16px; cursor:pointer;
+}
+.panel .levels-reset-btn:hover:not(:disabled) { background:var(--bg-raised-hi); }
+.panel .levels-reset-btn:disabled { opacity:.35; cursor:default; }
+.panel .levels-reset-btn:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+.panel .tabs #detachBtn { margin-left:0; }
+@media (prefers-reduced-motion:reduce) { .limit-switch-knob { transition:none; } }
+
+/* Contextual group controls sit directly below the selected parent cell. */
+.slider-block { position:relative; flex:0 0 auto; min-width:0; }
+.level-group-row { position:relative; height:18px; margin-top:3px; }
+.level-group-row[hidden], .level-cell-outline[hidden] { display:none; }
+.level-group-controls { position:absolute; top:0; height:18px; display:flex; align-items:center; gap:3px; white-space:nowrap; }
+.level-group-controls b { min-width:10px; font-size:11px; text-align:right; }
+.level-group-controls button { height:16px; padding:0 6px; background:var(--bg-raised); color:var(--text); border:1px solid var(--divider); border-radius:2px; font-size:11px; cursor:pointer; }
+.level-group-controls button:disabled { opacity:.35; cursor:default; }
+.level-group-controls button:hover:not(:disabled) { background:var(--bg-raised-hi); }
+.level-group-controls button:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+.level-cell-outline { position:absolute; top:0; bottom:0; box-shadow:inset 0 0 0 2px var(--accent); pointer-events:none; }
+
+/* Discrete values select the whole cell; continuous values retain a thin line. */
+.panel .track.is-discrete .thumb,
+.mix-strip-track.is-discrete .mix-strip-thumb {
+  top:0; height:100%; margin-left:0; border:0; border-radius:0;
+  background:transparent; box-shadow:inset 0 0 0 2px var(--accent);
+  pointer-events:none; z-index:2;
+}
+.panel .track.is-discrete .thumb.is-subcell,
+.mix-strip-track.is-discrete .mix-strip-thumb.is-subcell {
+  box-shadow:inset 0 0 0 1px var(--text-primary);
+}
+.level-cell-outline { z-index:1; }
+
+/* Group editing is an explicit toolbar mode; existing sub-colors stay intact. */
+.panel .groups-toggle-btn {
+  position:static; margin-left:auto; align-self:center; flex:0 0 auto;
+  height:max(22px, calc(28 * var(--u))); padding:0 6px;
+  background:var(--surface-raised); color:var(--text-primary);
+  border:1px solid var(--divider); border-radius:2px; font:inherit; font-size:11px; cursor:pointer;
+}
+.panel .groups-toggle-btn[aria-pressed="true"] { background:var(--pressed-bg); border-color:var(--accent); }
+.panel .groups-toggle-btn:hover { border-color:var(--text-dim); }
+.panel .groups-toggle-btn:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+.panel .levels-reset-btn { margin-left:0; }
+.bw-group-row[hidden] { display:none; }
+.panel:not(.groups-editing) #bwBlock { height:calc(var(--bw-h) - 21px); }
+.panel:not(.groups-editing) .bw-cell.is-selected::after { display:none; }
+/* Settings is a compact nonmodal dialog, with one expanded section at a time. */
+.panel #menuBtn { left:auto; right:var(--pad-x); top:max(14px, calc(28 * var(--u))); transform:translateY(-50%); width:28px; height:28px; }
+.panel #menuBtn span { display:block; font:20px/1 'Segoe UI Symbol','Segoe UI',sans-serif; }
+.panel #panelMenu {
+  left:auto; right:var(--pad-x); top:calc(56 * var(--u) + 4px);
+  width:calc(100% - 2 * var(--pad-x)); min-width:0; max-width:380px;
+  padding:0; border-radius:8px; background:var(--surface-raised);
+  overflow-x:hidden; overflow-y:auto; box-shadow:0 10px 26px rgba(0,0,0,.35);
+}
+.settings-header { position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; background:var(--surface-raised); border-bottom:1px solid var(--divider); }
+.settings-title { font-size:13px; font-weight:600; color:var(--text-primary); }
+.settings-close { width:26px; height:26px; padding:0; background:transparent; color:var(--text); border:1px solid transparent; border-radius:4px; font-size:20px; cursor:pointer; }
+.settings-close:hover { background:var(--bg-raised-hi); }
+.settings-section + .settings-section { border-top:1px solid var(--divider); }
+.settings-section-toggle { display:flex; align-items:center; justify-content:space-between; width:100%; gap:12px; padding:11px 12px; border:0; background:transparent; color:var(--text-primary); text-align:left; font:inherit; font-size:12px; font-weight:600; cursor:pointer; }
+.settings-section-toggle:hover, .settings-section-toggle[aria-expanded="true"] { background:var(--bg-raised-hi); }
+.settings-section-indicator { color:var(--text-dim); font-size:16px; font-weight:400; }
+.settings-section-body { padding:4px 0 10px; }
+.settings-section-body[hidden] { display:none; }
+.settings-close:focus-visible, .settings-section-toggle:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; }
+.panel #panelMenu .menu-row { min-height:34px; padding:5px 12px; gap:8px; flex-wrap:wrap; }
+.panel #panelMenu .menu-label { font-size:12px; min-width:48px; }
+.panel #panelMenu .menu-row select { max-width:100%; font-size:12px; }
+.panel #panelMenu .menu-check { min-height:32px; padding:7px 12px; font-size:12px; }
+.panel #panelMenu .menu-group { margin:9px 0 4px; padding:0 12px; font-size:10px; letter-spacing:.06em; }
+.panel #panelMenu .menu-hint { margin:4px 0 7px; padding:0 12px; font-size:11px; line-height:1.45; }
+.panel #panelMenu .theme-swatch { width:22px; height:22px; }
+.panel #panelMenu .theme-swatches { gap:5px; }
+.panel #panelMenu .rot-btn { min-height:26px; }
+.panel #panelMenu .menu-sub { padding-left:0; }
+.panel #panelMenu .mask-rack { margin:4px 12px 8px; }
+.panel .hex-row[hidden] { display:none; }
+
+/* Wide layout: coherent wheel cluster + a steady control column. */
+.panel.layout-side {
+  --side-top:60px; --limit-h:44px; --tab-h:36px; --status-h:26px;
+  background-size:100% 1px, 1px calc(100% - 44px);
+  background-position:0 44px, var(--area-w) 44px;
+}
+.panel.layout-side .panel-header { height:44px; }
+.panel.layout-side .panel-title { left:16px; top:22px; transform:translateY(-50%); font-size:12px; line-height:16px; }
+.panel.layout-side .xuimart-header-logo { height:16px; }
+.panel.layout-side #menuBtn { right:16px; top:22px; }
+.panel.layout-side #limitPanel {
+  --u:1px; left:calc(var(--area-w) + 16px); top:var(--side-top); bottom:auto;
+  width:calc(var(--col-w) - 32px); height:28px; margin:0;
+  transform:none; flex-direction:row; justify-content:center; gap:14px;
+}
+.panel.layout-side .tabs {
+  --u:1px; left:var(--area-w); width:var(--col-w);
+  top:calc(var(--side-top) + 44px); height:36px; padding:0 16px; gap:4px;
+}
+.panel.layout-side .tab,
+.panel.layout-side #tabSliders,
+.panel.layout-side #tabMixers,
+.panel.layout-side #tabPalettes { flex:0 0 auto; padding:0 10px; font-size:12px; }
+.panel.layout-side .tab-body {
+  --u:1px; --row-h:32px; --slider-gap:10px; --mode-gap:12px;
+  --mode-h:32px; --pane-pad-y:8px; --pad-x:16px; --bw-h:80px;
+  top:calc(var(--side-top) + 88px); bottom:calc(var(--status-h) + 12px);
+  left:var(--area-w); width:var(--col-w); height:auto;
+}
+.panel.layout-side .slider-row .ch-label { font-size:12px; }
+.panel.layout-side .slider-row .num-field { font-size:12px; }
+.panel.layout-side .mode-btn { height:28px; font-size:12px; }
+.panel.layout-side .mode-caption { font-size:10px; }
+.panel.layout-side .status-bar {
+  --u:1px; left:var(--area-w); width:var(--col-w); bottom:0; top:auto;
+  height:var(--status-h); padding:6px 16px; font-size:10px;
+  overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+}
+.panel.layout-side::after {
+  content:''; position:absolute; left:var(--area-w); top:44px; bottom:0;
+  width:1px; background:var(--divider); pointer-events:none; z-index:7;
+}

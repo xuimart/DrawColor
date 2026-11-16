@@ -121,7 +121,7 @@ window.PanelSync = (function () {
     active = true;
 
     S.subscribe(function (_state, reason) {
-      if (reason === PEER_REASON) return;
+      if (reason === PEER_REASON || reason === 'host-background' || reason === 'background') return;
       scheduleSend();
     });
 

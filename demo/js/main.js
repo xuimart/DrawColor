@@ -6,7 +6,7 @@
   'use strict';
 
   /** Versão local do plugin — atualizada a cada release. */
-  const DRAWCOLOR_VERSION = '1.0.7';
+  const DRAWCOLOR_VERSION = '1.0.8';
 
   /* ------------------------------------------------------------------ *
    * Diagnóstico de boot (DrawColor Diag)
@@ -187,17 +187,44 @@
     const btn = document.getElementById('menuBtn');
     const menu = document.getElementById('panelMenu');
 
+    function sizeMenu() {
+      if (menu.hidden) return;
+      const header = btn.parentElement.getBoundingClientRect();
+      menu.style.top = Math.max(header.height, btn.getBoundingClientRect().bottom - header.top) + 4 + 'px';
+      const rect = menu.getBoundingClientRect();
+      const panel = document.getElementById('panel').getBoundingClientRect();
+      menu.style.maxHeight = Math.max(80, Math.min(window.innerHeight, panel.bottom) - rect.top - 12) + 'px';
+    }
     function open() {
       menu.hidden = false;
       btn.setAttribute('aria-expanded', 'true');
+      sizeMenu();
+      const active = menu.querySelector('.settings-section-toggle[aria-expanded="true"]');
+      if (active) active.focus();
     }
-    function close() {
+    function close(returnFocus) {
       menu.hidden = true;
       btn.setAttribute('aria-expanded', 'false');
+      if (returnFocus) btn.focus();
     }
     function toggle() {
-      if (menu.hidden) open(); else close();
+      if (menu.hidden) open(); else close(true);
     }
+    menu.querySelectorAll('.settings-section-toggle').forEach(function (toggleSection) {
+      toggleSection.addEventListener('click', function () {
+        const expand = toggleSection.getAttribute('aria-expanded') !== 'true';
+        menu.querySelectorAll('.settings-section-toggle').forEach(function (section) {
+          const selected = section === toggleSection && expand;
+          section.setAttribute('aria-expanded', String(selected));
+          document.getElementById(section.getAttribute('aria-controls')).hidden = !selected;
+          section.querySelector('.settings-section-indicator').textContent = selected ? '−' : '+';
+        });
+        sizeMenu();
+      });
+    });
+    document.getElementById('settingsClose').addEventListener('click', function () { close(true); });
+    window.addEventListener('resize', sizeMenu);
+
 
     btn.addEventListener('click', (evt) => {
       evt.stopPropagation();
@@ -792,7 +819,6 @@
       { tab: 'tabSliders', pane: 'paneSliders' },
       { tab: 'tabMixers', pane: 'paneMixers' },
       { tab: 'tabPalettes', pane: 'panePalettes' },
-      { tab: 'tabGode', pane: 'paneGode' }
     ];
 
     function activateTab(targetTab) {
@@ -916,7 +942,6 @@
     safe('Wheel.init', function () { W.init(); });
     safe('Panels.init', function () { window.Panels.init(); });
     safe('Palettes.init', function () { window.Palettes.init(); });
-    safe('Gode.init', function () { window.Gode.init(); });
     // Depois dos painéis: o docking move nós já montados
     safe('Docking.init', function () { window.Docking.init(); });
 

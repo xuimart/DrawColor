@@ -17,7 +17,6 @@ window.Docking = (function () {
     paneSliders:  { tab: 'tabSliders',  i18n: 'tab.sliders' },
     paneMixers:   { tab: 'tabMixers',   i18n: 'tab.mixers' },
     panePalettes: { tab: 'tabPalettes', i18n: 'tab.palettes' },
-    paneGode:     { tab: 'tabGode',     i18n: 'tab.gode' }
   };
 
   function paneTitle(id) { return I18N.t(PANES[id].i18n); }

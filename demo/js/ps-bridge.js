@@ -95,8 +95,9 @@ window.PSBridge = (function () {
   }
 
   function readForegroundCep(callback) {
-    // ExtendScript: devolve "r,g,b" do foreground atual.
-    var jsx = 'var c = app.foregroundColor.rgb; c.red + "," + c.green + "," + c.blue;';
+    // Both host colors in one read: "foreground r,g,b;background r,g,b".
+    var jsx = 'var c = app.foregroundColor.rgb; var b = app.backgroundColor.rgb; ' +
+      'c.red + "," + c.green + "," + c.blue + ";" + b.red + "," + b.green + "," + b.blue;';
     // Uma leitura por vez. Se o callback nunca voltar, a trava expira.
     if (readPending && Date.now() - readStartedAt < READ_TIMEOUT) return;
     readPending = true;
@@ -105,7 +106,12 @@ window.PSBridge = (function () {
       cs.evalScript(jsx, function (res) {
         readPending = false;
         if (!res || res === 'EvalScript error.') { callback(null); return; }
-        var parts = String(res).split(',');
+        var colors = String(res).split(';');
+        if (colors.length > 1) {
+          var bg = colors[1].split(',');
+          if (bg.length === 3) S.setBackground({ r: Number(bg[0]), g: Number(bg[1]), b: Number(bg[2]) }, 'host-background');
+        }
+        var parts = colors[0].split(',');
         if (parts.length !== 3) { callback(null); return; }
         callback({
           r: Math.round(parseFloat(parts[0])),
@@ -158,6 +164,22 @@ window.PSBridge = (function () {
       cs.evalScript(jsx, function () {});
     } catch (e) {
       connected = false;
+    }
+  }
+
+  function writeBackground(rgb) {
+    if (ps) {
+      try {
+        ps.action.batchPlay([{
+          _obj: 'set',
+          _target: [{ _ref: 'color', _property: 'backgroundColor' }],
+          to: { _obj: 'RGBColor', red: rgb.r, grain: rgb.g, blue: rgb.b },
+          _options: { dialogOptions: 'dontDisplay' }
+        }], { synchronousExecution: false, modalBehavior: 'execute' }).catch(function () {});
+      } catch (e) { /* next host read will restore the actual color */ }
+    } else if (cs) {
+      cs.evalScript('var c = new SolidColor();c.rgb.red = ' + rgb.r +
+        ';c.rgb.green = ' + rgb.g + ';c.rgb.blue = ' + rgb.b + ';app.backgroundColor = c;', function () {});
     }
   }
 
@@ -257,6 +279,10 @@ window.PSBridge = (function () {
     // O triplo LAB/CMYK é protegido em adopt(), que só deixa passar mudança
     // real do host. O polling em si nunca para.
     if (ps) {
+      try {
+        var bg = ps.app.backgroundColor;
+        if (bg && bg.rgb) S.setBackground({ r: bg.rgb.red, g: bg.rgb.green, b: bg.rgb.blue }, 'host-background');
+      } catch (e) { /* a background read must not interrupt foreground sync */ }
       adopt(readForegroundUxp());
     } else if (cs) {
       readForegroundCep(adopt);
@@ -275,7 +301,8 @@ window.PSBridge = (function () {
     // AppState.emit chama os subscribers como fn(state, reason): `reason` é o
     // segundo argumento e é uma string.
     S.subscribe(function (_state, reason) {
-      if (reason === HOST_REASON) return;
+      if (reason === HOST_REASON || reason === 'host-background') return;
+      if (reason === 'background') { writeBackground(S.state.background); return; }
       /**
        * Cor vinda da outra janela da extensão (PanelSync): quem mexeu já
        * gravou no Photoshop. Regravar aqui era o eco que atrapalhava o
