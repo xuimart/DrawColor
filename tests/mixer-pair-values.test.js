@@ -16,6 +16,57 @@ beforeEach(() => {
   S.setBackground({ r: 0, g: 0, b: 255 }, 'host-background');
 });
 describe('Mixer: primary / secondary and values', () => {
+  it('offers a direct gray midpoint or either saturated hue route between complementary colors', () => {
+    const pair={primary:{r:255,g:0,b:255},secondary:{r:0,g:255,b:0}};
+    assert.deepEqual(P.mixerColorAt('pair',.5,pair,'rgb'),{r:128,g:128,b:128});
+    assert.deepEqual(P.mixerColorAt('pair',.5,pair,'hue-cw'),{r:255,g:128,b:0});
+    assert.deepEqual(P.mixerColorAt('pair',.5,pair,'hue-ccw'),{r:0,g:128,b:255});
+    for(const mode of ['rgb','hue-cw','hue-ccw']) {
+      assert.deepEqual(P.mixerColorAt('pair',0,pair,mode),pair.primary);
+      assert.deepEqual(P.mixerColorAt('pair',1,pair,mode),pair.secondary);
+    }
+  });
+  it('crosses the red seam in either direction without changing the chosen hue route', () => {
+    const C=window.Color;
+    const pair={primary:C.hsvToRgb(350,100,100),secondary:C.hsvToRgb(10,100,100)};
+    assert.deepEqual(P.mixerColorAt('pair',.5,pair,'hue-cw'),{r:255,g:0,b:0});
+    assert.deepEqual(P.mixerColorAt('pair',.5,pair,'hue-ccw'),{r:0,g:255,b:255});
+    for(const mode of ['hue-cw','hue-ccw'])for(const t of [.1,.3,.5,.7,.9]) {
+      const rgb=P.mixerColorAt('pair',t,pair,mode);
+      assert.ok(C.rgbToHsv(rgb.r,rgb.g,rgb.b).s>99);
+    }
+  });
+  it('does not invent a rainbow for gray endpoints or two colors with the same hue', () => {
+    for(const mode of ['hue-cw','hue-ccw']) {
+      const grays={primary:{r:0,g:0,b:0},secondary:{r:255,g:255,b:255}};
+      assert.deepEqual(P.mixerColorAt('pair',.5,grays,mode),{r:128,g:128,b:128});
+      const tint={primary:{r:128,g:128,b:128},secondary:{r:0,g:0,b:255}};
+      const mid=P.mixerColorAt('pair',.5,tint,mode);
+      assert.equal(mid.r,mid.g);assert.ok(mid.b>mid.r);
+      const reds={primary:{r:255,g:0,b:0},secondary:{r:128,g:0,b:0}};
+      assert.deepEqual(P.mixerColorAt('pair',.5,reds,mode),{r:192,g:0,b:0});
+    }
+  });
+  it('preserves sources, levels and groups when changing the transition and saves the choice', () => {
+    const previousPlatform=window.Platform,stored={};
+    window.Platform={storage:{setItem:(key,value)=>stored[key]=value}};
+    try {
+      const pair=P.syncMixerPair('init');
+      P.setMixerSteps('pair',5);P.setLevelGroup(P.mixerGroupKey('pair'),2,3,5);
+      assert.equal(P.getPairTransition(),'rgb');
+      for(const mode of ['hue-cw','hue-ccw','rgb']) {
+        assert.equal(P.setPairTransition(mode),true);
+        assert.equal(stored['drawcolor-pair-transition'],mode);
+        P.samplePair(.5);
+        assert.deepEqual(S.getRgb(),P.mixerColorAt('pair',.5,pair,mode));
+        assert.deepEqual(P.syncMixerPair('gesture-end'),pair);
+        assert.equal(P.getMixerSteps('pair'),5);
+        assert.equal(P.getLevelGroup(P.mixerGroupKey('pair'),2),3);
+      }
+      assert.equal(P.setPairTransition('invalid'),false);
+      assert.equal(P.getPairTransition(),'rgb');
+    } finally {window.Platform=previousPlatform;}
+  });
   it('group editing starts off and toggling it preserves subdivisions, colors and level counts', () => {
     assert.equal(P.isGroupEditing(),false);
     P.setSliderLevels('RGB','r',5);
@@ -163,10 +214,20 @@ describe('Mixer: primary / secondary and values', () => {
     P.syncMixerPair('init');
     P.samplePair(0.5);
     S.pushHistory();
+    P.syncMixerPair('gesture-end');
     P.syncMixerPair('history');
     P.samplePair(0.5);
     assert.deepEqual(S.getRgb(), { r:128, g:0, b:128 });
     assert.deepEqual(S.state.background, {r:0,g:0,b:255});
+  });
+  it('keeps all original colors reachable after choosing intermediate colors or either endpoint', () => {
+    const pair=P.syncMixerPair('init');
+    for(const t of [.25,.75,1,.5,0,.25]) {
+      P.samplePair(t);
+      S.pushHistory();
+      assert.deepEqual(P.syncMixerPair('gesture-end'),pair);
+      assert.deepEqual(S.getRgb(),P.mixerColorAt('pair',t,pair));
+    }
   });
   it('records one color per gesture instead of one per pointer movement', () => {
     const pair = P.syncMixerPair('init');

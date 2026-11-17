@@ -34,8 +34,8 @@ window.License = (function () {
     validateTimeoutMs: 5000,
     // Google OAuth Client ID (configurar com o projeto Firebase)
     googleClientId: '85688443338-ju0cpceadrt1hfgtvnpao2555tq4g1ko.apps.googleusercontent.com',
-    // Google OAuth Client Secret (necessário para trocar code por token no CEP)
-    googleClientSecret: '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',
+    // Segredos OAuth não podem ser incorporados ao painel distribuído.
+    googleClientSecret: '',
     // Porta para o servidor OAuth localhost (CEP)
     oauthLocalPort: 8437
   };

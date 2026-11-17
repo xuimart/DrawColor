@@ -1153,9 +1153,23 @@ window.Panels = (function () {
   /* ================= Mixer — barras estilo Coolorus ================= */
 
   var mixerPair = null;
+  var mixerPairPosition = 0;
+  var pairTransition = 'rgb';
   var activeMixer = null;
   var mixerSteps = {};
   var MIXER_KEYS = ['pair', 'blender', 'shades', 'scheme'];
+
+  function getPairTransition() { return pairTransition; }
+  function setPairTransition(mode) {
+    if (['rgb', 'hue-cw', 'hue-ccw'].indexOf(mode) < 0) return false;
+    pairTransition = mode;
+    var select = document.getElementById('mixPairTransition');
+    if (select) select.value = mode;
+    if (window.Platform && window.Platform.storage) {
+      window.Platform.storage.setItem('drawcolor-pair-transition', mode);
+    }
+    return true;
+  }
 
   function mixerMode(key) {
     var select = document.getElementById(key + 'Mode');
@@ -1213,15 +1227,31 @@ window.Panels = (function () {
 
   function syncMixerPair(reason) {
     if (activeMixer && activeMixer.key === 'pair') return activeMixer.base;
-    if (!mixerPair || ['color', 'slider', 'host', 'peer', 'swap', 'init', 'host-background', 'background', 'gesture-end'].indexOf(reason) >= 0 || (reason && reason.indexOf('mixer-') === 0)) {
+    // A mistura aplica uma nova cor de pintura, mas não troca suas fontes.
+    // Só outra ferramenta ou uma mudança externa inicia um novo par.
+    if (!mixerPair || ['color', 'slider', 'host', 'peer', 'swap', 'init', 'host-background', 'background'].indexOf(reason) >= 0 || (reason && reason.indexOf('mixer-') === 0)) {
       mixerPair = {primary:S.getRgb(), secondary:{...S.state.background}};
+      mixerPairPosition = 0;
     }
     return mixerPair;
   }
 
   // Pure color mapping shared by rendering and tests. The base is frozen per gesture.
   function mixerColorAt(key, t, base, mode) {
-    if (key === 'pair') return C.mixRgb(base.primary, base.secondary, t);
+    if (key === 'pair') {
+      t = C.clamp(t, 0, 1);
+      if ((mode !== 'hue-cw' && mode !== 'hue-ccw') || t === 0 || t === 1) return C.mixRgb(base.primary, base.secondary, t);
+      var a = C.rgbToHsv(base.primary.r, base.primary.g, base.primary.b);
+      var b = C.rgbToHsv(base.secondary.r, base.secondary.g, base.secondary.b);
+      // Neutros não têm matiz: adotam o da outra fonte, sem arco artificial.
+      if (a.s === 0 && b.s === 0) return C.mixRgb(base.primary, base.secondary, t);
+      if (a.s === 0) a.h = b.h;
+      if (b.s === 0) b.h = a.h;
+      var delta = (b.h - a.h + 360) % 360;
+      if (delta < 1e-9 || delta > 360 - 1e-9) delta = 0;
+      if (mode === 'hue-ccw' && delta > 0) delta -= 360;
+      return C.hsvToRgb(a.h + delta * t, a.s + (b.s - a.s) * t, a.v + (b.v - a.v) * t);
+    }
     var h = base.h, s = base.s, v = base.v;
     if (key === 'blender') {
       if (mode === 'saturation') s = t * 100;
@@ -1239,7 +1269,7 @@ window.Panels = (function () {
     var canvas = document.getElementById(canvasId);
     if (!canvas) return;
     var base = activeMixer && activeMixer.key === key ? activeMixer.base : key === 'pair' ? syncMixerPair() : S.getHsv();
-    var mode = mixerMode(key), count = getMixerSteps(key);
+    var mode = key === 'pair' ? getPairTransition() : mixerMode(key), count = getMixerSteps(key);
     var ctx = canvas.getContext('2d');
     var w = canvas.width = Math.max(2, canvas.offsetWidth || 300);
     for (var x = 0; x < w; x++) {
@@ -1254,7 +1284,8 @@ window.Panels = (function () {
   function samplePair(t, pair) {
     pair = pair || syncMixerPair();
     t = C.clamp(t, 0, 1);
-    var rgb = C.mixRgb(pair.primary, pair.secondary, t);
+    mixerPairPosition = t;
+    var rgb = mixerColorAt('pair', t, pair, getPairTransition());
     var thumb = document.getElementById('mixPairThumb');
     var track = document.getElementById('mixPairTrack');
     var groups = getLevelGroups(mixerGroupKey('pair'));
@@ -1266,6 +1297,16 @@ window.Panels = (function () {
   function sampleValue(t) { MODES['B/W'].write({w:C.clamp(t, 0, 1) * 100}); }
 
   function initMixer() {
+    try {
+      var savedTransition = window.Platform.storage.getItem('drawcolor-pair-transition');
+      if (savedTransition) setPairTransition(savedTransition);
+    } catch (e) { /* a mistura direta continua como padrão */ }
+    document.getElementById('mixPairTransition').addEventListener('change', function (evt) {
+      if (!setPairTransition(evt.target.value)) return;
+      samplePair(mixerPairPosition);
+      S.pushHistory();
+      refreshMixer();
+    });
     // Toggle de visibilidade das barras
     document.querySelectorAll('.mix-dot').forEach(function (dot) {
       dot.addEventListener('click', function () {
@@ -1499,16 +1540,17 @@ window.Panels = (function () {
     drawMixerCanvas('pair', 'mixPairCanvas');
     if (!activeMixer || activeMixer.key !== 'pair') {
       var groups = getLevelGroups(mixerGroupKey('pair'));
-      paintTrackSelection(document.getElementById('mixPairTrack'), document.getElementById('mixPairThumb'), selectionForValue(0, getMixerSteps('pair'), groups), getMixerSteps('pair'), groups);
-      document.getElementById('mixPairTrack').setAttribute('aria-valuenow', '0');
+      paintTrackSelection(document.getElementById('mixPairTrack'), document.getElementById('mixPairThumb'), selectionForValue(mixerPairPosition, getMixerSteps('pair'), groups), getMixerSteps('pair'), groups);
+      document.getElementById('mixPairTrack').setAttribute('aria-valuenow', String(Math.round(mixerPairPosition * 100)));
     }
-    // Endpoint chips always reflect the actual selected colors.
+    // As amostras são as fontes da faixa; a cor aplicada aparece no pick principal.
+    var pair = syncMixerPair();
     var primary = document.getElementById('mixPairPrimary');
     var secondary = document.getElementById('mixPairSecondary');
-    primary.style.background = S.displayCss(S.getRgb());
-    secondary.style.background = S.displayCss(S.state.background);
-    primary.title = '#' + C.rgbToHex(S.getRgb().r, S.getRgb().g, S.getRgb().b).replace(/^#/, '');
-    secondary.title = '#' + C.rgbToHex(S.state.background.r, S.state.background.g, S.state.background.b).replace(/^#/, '');
+    primary.style.background = S.displayCss(pair.primary);
+    secondary.style.background = S.displayCss(pair.secondary);
+    primary.title = '#' + C.rgbToHex(pair.primary.r, pair.primary.g, pair.primary.b).replace(/^#/, '');
+    secondary.title = '#' + C.rgbToHex(pair.secondary.r, pair.secondary.g, pair.secondary.b).replace(/^#/, '');
   }
 
   function refreshHistoryBar() {
@@ -1723,6 +1765,6 @@ window.Panels = (function () {
     // amostragem das barras do mixer
     applyChannel, readVals, dropLatchIfExternal, ORIGENS_EXTERNAS,
     resolveVals, sameRgb, quantize, valueFromRatio, getSliderLevels, setSliderLevels, sliderLevelSample, resetLevels, hasCustomLevels, setGroupEditing, isGroupEditing, getLevelGroups, getLevelGroup, setLevelGroup, groupedLevelSelection, levelGroupMax, levelStops, sliderGroupKey, mixerGroupKey,
-    sampleBlender, sampleShades, sampleScheme, samplePair, sampleValue, syncMixerPair, mixerSelection, getMixerSteps, setMixerSteps, mixerColorAt
+    sampleBlender, sampleShades, sampleScheme, samplePair, sampleValue, syncMixerPair, mixerSelection, getMixerSteps, setMixerSteps, mixerColorAt, getPairTransition, setPairTransition
   };
 })();

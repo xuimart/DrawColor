@@ -271,8 +271,8 @@ window.LAYOUT = (function () {
 
   /**
    * A toolbar sempre precede as abas. O painel amplo usa uma coluna de
-   * controles estável; as ferramentas continuam junto da roda, sem ir para
-   * bordas distantes nem transportar o limitador para um vão ou rodapé.
+   * controles estável. As ferramentas aproveitam a largura livre sem
+   * transportar o limitador para um vão ou rodapé.
    */
   function computePlan(w, h, strip, opts) {
     opts = opts || {};
@@ -303,9 +303,22 @@ window.LAYOUT = (function () {
 
   /* ---------------- Aplicação do layout ---------------- */
 
-  /** Ferramentas mantêm a composição da referência ao redor da roda. */
+  /**
+   * Quando a altura limita a escala, a sobra horizontal serve às ferramentas.
+   * Desloca cada conjunto inteiro para preservar a sobreposição das amostras,
+   * o espaçamento dos dials e das harmonias; a roda continua circular no centro.
+   */
+  function responsiveControlPoint(id, anchor, center, s, ctx) {
+    const point = anchorToPoint(anchor, center, s);
+    if (!ctx || !ctx.clamp) return point;
+    const shift = Math.max(0, (ctx.right - REFERENCE.width * s) / 2 - 4);
+    if (/^(swatch\.|hex\.|history\.|sat\.)/.test(id)) point.x -= shift;
+    else if (/^(harmony\.|rail\.dial\.)/.test(id)) point.x += shift;
+    return point;
+  }
+
   function controlPoint(id, anchor, center, ctx) {
-    return anchorToPoint(anchor, center, currentScale);
+    return responsiveControlPoint(id, anchor, center, currentScale, ctx);
   }
 
   function place(el, anchor, center, id, ctx) {
@@ -515,6 +528,7 @@ window.LAYOUT = (function () {
     computeScale: computeScale,
     computeOffsetX: computeOffsetX,
     computePlan: computePlan,
+    responsiveControlPoint: responsiveControlPoint,
     plan: function () { return currentPlan; },
     scale: scale,
     offsetX: offsetX,

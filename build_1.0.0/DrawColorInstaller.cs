@@ -15,7 +15,7 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("DrawColor Installer")]
 [assembly: AssemblyDescription("Instalador do Plugin DrawColor para Adobe Photoshop")]
-[assembly: AssemblyVersion("1.0.8.0")]
+[assembly: AssemblyVersion("1.0.9.0")]
 
 namespace DrawColorInstaller
 {
@@ -109,7 +109,7 @@ namespace DrawColorInstaller
         public InstallerForm()
         {
             // Janela
-            this.Text            = "Instalador DrawColor v1.0.8";
+            this.Text            = "Instalador DrawColor v1.0.9";
             this.Size            = new Size(780, 540);
             this.MinimumSize     = new Size(780, 540);
             this.MaximumSize     = new Size(780, 540);
@@ -139,22 +139,22 @@ namespace DrawColorInstaller
         void ShowChangelogOnce()
         {
             string changelog =
-                "DrawColor v1.0.8 - Novidades:\n\n" +
-                "  - Niveis independentes nos sliders e mixers,\n" +
-                "    com selecao por quadrado ate 10 cores\n" +
-                "  - Grupos de tons com botao para editar e\n" +
-                "    reset para voltar ao gradiente continuo\n" +
-                "  - Mixer das cores primaria e secundaria\n" +
-                "    sincronizado com o Photoshop\n" +
-                "  - Menu de configuracoes reorganizado\n" +
-                "  - Layout melhorado para janelas largas\n" +
-                "    e limitador de cores em posicao fixa\n" +
-                "  - Gode desativado\n\n" +
+                "DrawColor v1.0.9 - Novidades:\n\n" +
+                "  - Mixer primaria/secundaria: escolha entre\n" +
+                "    mistura direta (RGB) e transicao pelo matiz\n" +
+                "    nos sentidos horario e anti-horario\n" +
+                "  - O modo de transicao escolhido fica salvo\n" +
+                "  - A faixa mantem as cores de origem e o\n" +
+                "    quadrado selecionado depois do clique\n" +
+                "  - Niveis e grupos preservados ao trocar\n" +
+                "    o caminho da mistura\n" +
+                "  - Controles laterais aproveitam melhor\n" +
+                "    a largura disponivel do painel\n\n" +
                 "Desenvolvido por Xuimart\n" +
                 "Apoie: https://livepix.gg/xuimart";
             MessageBox.Show(
                 changelog,
-                "Novidades do DrawColor v1.0.8",
+                "Novidades do DrawColor v1.0.9",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information
             );
@@ -219,7 +219,7 @@ namespace DrawColorInstaller
 
             lblVersion = new Label
             {
-                Text      = "v1.0.8",
+                Text      = "v1.0.9",
                 Font      = new Font("Segoe UI", 8.5f, FontStyle.Bold),
                 ForeColor = TEXT_DIM,
                 Location  = new Point(720, 16),
@@ -692,7 +692,7 @@ namespace DrawColorInstaller
                         zipPath = tmpPath;
                         var sizeMB = new FileInfo(zipPath).Length / 1024 / 1024;
                         if (lblPlugin != null) lblPlugin.Text = "Plugin 100% embutido no EXE (" + sizeMB + " MB).";
-                        Log("Plugin carregado do instalador (v1.0.8 100% embutido).", Color.FromArgb(0,200,100));
+                        Log("Plugin carregado do instalador (v1.0.9 100% embutido).", Color.FromArgb(0,200,100));
                         UpdateButtonState();
                         return;
                     }
@@ -1151,7 +1151,7 @@ namespace DrawColorInstaller
                 var sb = new System.Text.StringBuilder();
                 sb.AppendLine("==== DrawColor - Diagnostico do Sistema ====");
                 sb.AppendLine("Gerado em: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-                sb.AppendLine("Instalador: v1.0.8");
+                sb.AppendLine("Instalador: v1.0.9");
                 sb.AppendLine();
 
                 sb.AppendLine("---- Windows ----");

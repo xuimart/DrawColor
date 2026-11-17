@@ -6,7 +6,7 @@
   'use strict';
 
   /** Versão local do plugin — atualizada a cada release. */
-  const DRAWCOLOR_VERSION = '1.0.8';
+  const DRAWCOLOR_VERSION = '1.0.9';
 
   /* ------------------------------------------------------------------ *
    * Diagnóstico de boot (DrawColor Diag)

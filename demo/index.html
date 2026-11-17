@@ -471,6 +471,11 @@
         <div class="mix-strip" data-strip="pair">
           <div class="mix-strip-head">
             <span class="mix-strip-title" data-i18n="mix.pair">Primária / secundária</span>
+            <select class="mix-strip-mode" id="mixPairTransition" data-i18n-aria="mix.transition.aria" data-i18n-title="mix.transition.aria">
+              <option value="rgb" data-i18n="mix.transition.rgb">Direta (RGB)</option>
+              <option value="hue-cw" data-i18n="mix.transition.clockwise">Matiz ↻</option>
+              <option value="hue-ccw" data-i18n="mix.transition.counterclockwise">Matiz ↺</option>
+            </select>
           </div>
           <div class="mix-pair-row">
             <button type="button" class="mix-pair-chip" id="mixPairPrimary" data-i18n-aria="swatch.fg"></button>

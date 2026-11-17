@@ -153,6 +153,51 @@ describe('computeOffsetX: a área da roda fica centralizada na largura que sobra
   });
 });
 
+describe('responsive lateral controls', function() {
+  it('uses the empty sides in a short Photoshop dock without moving the wheel', function() {
+    const s = 0.42, width = 406;
+    const ox = L.computeOffsetX(width, s);
+    const center = {x:ox + 325*s, y:352*s};
+    const ctx = {right:width, clamp:true};
+    const left = L.responsiveControlPoint('sat.shape', L.ANCHORS['sat.shape'], center, s, ctx);
+    const right = L.responsiveControlPoint('harmony.1', L.ANCHORS['harmony.1'], center, s, ctx);
+    if (left.x - 23*s > 14 || width - right.x - 23*s > 16) throw new Error('large empty side margins');
+    const lock = L.responsiveControlPoint('rail.lumlock', L.ANCHORS['rail.lumlock'], center, s, ctx);
+    const original = L.anchorToPoint(L.ANCHORS['rail.lumlock'], center, s);
+    if (lock.x !== original.x || lock.y !== original.y) throw new Error('central controls moved');
+  });
+
+  it('moves each side as a group and keeps vertical spacing at every size', function() {
+    fc.assert(fc.property(fc.integer({min:280,max:1800}), fc.double({min:0.25,max:1.35,noNaN:true}), function(w,s) {
+      fc.pre(628*s<=w);
+      const center={x:L.computeOffsetX(w,s)+325*s,y:352*s};
+      const ctx={right:w,clamp:true};
+      let leftShift, rightShift;
+      return Object.keys(L.ANCHORS).every(function(id) {
+        const a=L.anchorToPoint(L.ANCHORS[id],center,s);
+        const b=L.responsiveControlPoint(id,L.ANCHORS[id],center,s,ctx);
+        if(a.y!==b.y)return false;
+        if(/^(swatch\.|hex\.|history\.|sat\.)/.test(id)) {
+          if(leftShift===undefined)leftShift=b.x-a.x;
+          return Math.abs((b.x-a.x)-leftShift)<1e-8 && b.x<=a.x;
+        }
+        if(/^(harmony\.|rail\.dial\.)/.test(id)) {
+          if(rightShift===undefined)rightShift=b.x-a.x;
+          return Math.abs((b.x-a.x)-rightShift)<1e-8 && b.x>=a.x;
+        }
+        return b.x===a.x;
+      });
+    }),{numRuns:200});
+  });
+
+  it('keeps custom anchors unchanged while editing the layout', function() {
+    const center={x:300,y:200}, anchor={angle:123,radius:200};
+    const expected=L.anchorToPoint(anchor,center,0.4);
+    const actual=L.responsiveControlPoint('sat.shape',anchor,center,0.4,{right:600,clamp:false});
+    if(actual.x!==expected.x || actual.y!==expected.y)throw new Error('custom anchor shifted in editor');
+  });
+});
+
 describe('computePlan: stable toolbar and balanced wide layout', function() {
   var PS = {tabH:28, bodyH:152, statusH:0, limitRowH:44};
   var HOST = {allowSide:true};

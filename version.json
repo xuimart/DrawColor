@@ -1,5 +1,5 @@
 {
-  "version": "1.0.8",
-  "downloadUrl": "https://github.com/xuimart/DrawColor/releases/download/v1.0.8/DrawColor_Setup.exe",
-  "changelog": "Níveis e grupos nos sliders e mixers, mistura das cores primária e secundária sincronizada com o Photoshop, seleção por quadrado, reset dos níveis, novo menu de configurações e layout melhorado para janelas largas. Godê desativado."
+  "version": "1.0.9",
+  "downloadUrl": "https://github.com/xuimart/DrawColor/releases/download/v1.0.9/DrawColor_Setup.exe",
+  "changelog": "Novos caminhos de mistura: direta (RGB) ou pelo matiz nos dois sentidos, com a escolha salva. O mixer mantém as cores de origem e a seleção após o clique. Melhor aproveitamento das laterais do painel."
 }
