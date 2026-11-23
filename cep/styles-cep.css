@@ -180,11 +180,11 @@ html, body {
 /* muda em nada. Os pisos em px continuam garantindo alvo de clique.    */
 /* ==================================================================== */
 .shell-tools .panel {
-  --row-h:      max(22px, calc(24 * var(--u)));   /* linha de slider: 26 → 24 */
+  --row-h:      max(22px, calc(22 * var(--u)));
   --tab-h:      max(26px, calc(32 * var(--u)));   /* aba: 38 → 32 */
   --mode-h:     max(26px, calc(30 * var(--u)));   /* linha MODE: 33 → 30 */
   --pane-pad-y: max(5px, calc(6 * var(--u)));     /* folga interna: 8 → 6 */
-  --slider-gap: max(5px, calc(7 * var(--u)));     /* entre sliders: 10 → 7 */
+  --slider-gap: max(5px, calc(6 * var(--u)));
   --mode-gap:   max(5px, calc(6 * var(--u)));     /* sliders → MODE: 8 → 6 */
 }
 

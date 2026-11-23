@@ -1704,8 +1704,9 @@ window.Panels = (function () {
       }
     }
 
-    // Piso mínimo: não encolher além do conteúdo dos Sliders de 3 canais (~128px)
-    h = Math.max(h, 128);
+    // Sliders usam a medida real, inclusive no B/W compacto. As outras abas
+    // conservam seu piso para conteúdo com rolagem.
+    if (activePane.id !== 'paneSliders') h = Math.max(h, 128);
 
     if (h > 0) {
       panel.style.setProperty('--body-h', h + 'px');

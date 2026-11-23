@@ -1,5 +1,5 @@
 {
-  "version": "1.0.9",
-  "downloadUrl": "https://github.com/xuimart/DrawColor/releases/download/v1.0.9/DrawColor_Setup.exe",
-  "changelog": "Novos caminhos de mistura: direta (RGB) ou pelo matiz nos dois sentidos, com a escolha salva. O mixer mantém as cores de origem e a seleção após o clique. Melhor aproveitamento das laterais do painel."
+  "version": "1.0.10",
+  "downloadUrl": "https://github.com/xuimart/DrawColor/releases/download/v1.0.10/DrawColor_Setup.exe",
+  "changelog": "Layout dos sliders mais compacto, com faixas de cor mais largas, campos numéricos e botões de níveis menores. Melhor aproveitamento do espaço no painel e na janela de ferramentas."
 }

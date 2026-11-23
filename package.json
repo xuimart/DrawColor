@@ -1,6 +1,6 @@
 {
   "name": "drawcolor",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "private": true,
   "description": "DrawColor Color Wheel — núcleo compartilhado, shell UXP (Photoshop 22+) e shell CEP (Photoshop 21-25)",
   "scripts": {

@@ -2032,14 +2032,14 @@ html[data-tone="light"] .dial {
 .panel {
   --tab-h:    max(28px, calc(38 * var(--u)));
   --status-h: max(26px, calc(47 * var(--u)));
-  --row-h:    max(32px, calc(32 * var(--u)));
+  --row-h:    max(22px, calc(22 * var(--u)));
   --mode-h:   max(28px, calc(33 * var(--u)));
   --pad-x:    max(10px, calc(14 * var(--u)));
 
   /* Medidas internas da faixa, num lugar só: as alturas derivadas usam estas. */
-  --pane-pad-y: max(6px, calc(8 * var(--u)));
-  --slider-gap: max(5px, calc(10 * var(--u)));
-  --mode-gap:   max(6px, calc(8 * var(--u)));
+  --pane-pad-y: max(6px, calc(6 * var(--u)));
+  --slider-gap: max(5px, calc(6 * var(--u)));
+  --mode-gap:   max(6px, calc(6 * var(--u)));
   /* Régua + linha dos controles de grupo + contagem. */
   --bw-h:       max(80px, calc(88 * var(--u)));
 
@@ -2047,13 +2047,13 @@ html[data-tone="light"] .dial {
    * Altura do corpo da aba. NÃO é um número escolhido a olho: é a soma exata
    * do que os Sliders ocupam, nos mesmos tokens declarados acima.
    *
-   *   2 × pane-pad-y   16u / 12px
-   *   3 × row-h        96u / 96px   (RGB, HSV, LAB — 3 canais)
-   *   2 × slider-gap   20u / 10px
-   *   1 × mode-gap      8u /  6px
+   *   2 × pane-pad-y   12u / 12px
+   *   3 × row-h        66u / 66px   (RGB, HSV, LAB — 3 canais)
+   *   2 × slider-gap   12u / 10px
+   *   1 × mode-gap      6u /  6px
    *   1 × mode-h       33u / 28px
    *   ------------------------------
-   *                   173u / 152px
+   *                   129u / 122px
    *
    * Qualquer valor acima disso vira banda vazia entre a linha MODE e a barra
    * de status, porque é --body-h que define essa distância. Era daí que vinha
@@ -2063,7 +2063,7 @@ html[data-tone="light"] .dial {
    * token é um max() e o CEF do CEP não aceita max() dentro de multiplicação
    * em calc(). Se mexer num token acima, refaça a conta aqui.
    */
-  --body-h:   max(152px, calc(173 * var(--u)));
+  --body-h:   max(122px, calc(129 * var(--u)));
 
   /**
    * Altura da área que escala: cabeçalho, swatches, roda e barra de valor.
@@ -2109,20 +2109,20 @@ html[data-tone="light"] .dial {
 /**
  * Sem `:has()` — o CEF do CEP não suporta.
  *
- * O --body-h começa no valor genérico (max(152px, 173u)) e a margem entre
+ * O --body-h começa no valor genérico (max(122px, 129u)) e a margem entre
  * sliders e MODE é fixa em vez de auto. O buraco some porque o mode-row
  * não é mais empurrado para o fim do flex.
  */
 
 /**
  * CMYK tem 4 canais: a mesma conta com uma linha e um gap a mais.
- *   16 + 4×32 + 3×10 + 8 + 33 = 215u
- *   12 + 4×32 + 3×5  + 6 + 28 = 189px
+ *   12 + 4×22 + 3×6 + 6 + 33 = 157u
+ *   12 + 4×22 + 3×5 + 6 + 28 = 149px
  * `:has()` não existe no CEF do CEP; ali o CMYK aperta um pouco em vez de
  * abrir a banda vazia nos outros modos, que é o mal maior.
  */
 .panel.has-4ch {
-  --body-h: max(189px, calc(215 * var(--u)));
+  --body-h: max(149px, calc(157 * var(--u)));
 }
 
 /* ---------------- faixa de baixo ancorada pelo topo ---------------- */
@@ -2214,7 +2214,7 @@ html[data-tone="light"] .dial {
   display: flex;
   align-items: center;
   height: var(--row-h);
-  gap: max(5px, calc(8 * var(--u)));
+  gap: max(5px, calc(5 * var(--u)));
 }
 .panel .slider-row .ch-label {
   position: static;
@@ -2244,8 +2244,10 @@ html[data-tone="light"] .dial {
   top: auto;
   transform: none;
   flex: 0 0 auto;
-  width: max(48px, calc(70 * var(--u)));
+  width: max(34px, calc(36 * var(--u)));
   height: 100%;
+  padding: 0 2px;
+  font-size: max(11px, calc(11 * var(--u)));
 }
 
 /* A rampa B/W entra no fluxo, logo abaixo do canal único. */
@@ -2672,9 +2674,9 @@ html[data-tone="light"] .dial {
 .panel:not(.limit-card) .limit-panel-rows .js-limit-hues { width:44px; }
 /* Each channel has its own level count; numeric fields remain visible. */
 .slider-levels { display:flex; flex:0 0 auto; align-items:center; gap:3px; height:100%; }
-.slider-level-count { min-width:14px; text-align:center; color:var(--text-dim); font-size:11px; }
+.slider-level-count { min-width:12px; text-align:center; color:var(--text-dim); font-size:10px; }
 .slider-level-stepper { height:100%; }
-.slider-level-stepper button { width:22px; }
+.slider-level-stepper button { width:16px; min-height:0; padding:0; font-size:10px; line-height:8px; }
 .panel .slider-row .slider-levels { position:static; }
 .track.is-discrete .thumb { width:2px; margin-left:-1px; }
 
@@ -2801,13 +2803,13 @@ html[data-tone="light"] .dial {
 .panel.layout-side #tabMixers,
 .panel.layout-side #tabPalettes { flex:0 0 auto; padding:0 10px; font-size:12px; }
 .panel.layout-side .tab-body {
-  --u:1px; --row-h:32px; --slider-gap:10px; --mode-gap:12px;
-  --mode-h:32px; --pane-pad-y:8px; --pad-x:16px; --bw-h:80px;
+  --u:1px; --row-h:22px; --slider-gap:6px; --mode-gap:6px;
+  --mode-h:32px; --pane-pad-y:6px; --pad-x:16px; --bw-h:80px;
   top:calc(var(--side-top) + 88px); bottom:calc(var(--status-h) + 12px);
   left:var(--area-w); width:var(--col-w); height:auto;
 }
 .panel.layout-side .slider-row .ch-label { font-size:12px; }
-.panel.layout-side .slider-row .num-field { font-size:12px; }
+.panel.layout-side .slider-row .num-field { font-size:11px; }
 .panel.layout-side .mode-btn { height:28px; font-size:12px; }
 .panel.layout-side .mode-caption { font-size:10px; }
 .panel.layout-side .status-bar {

@@ -372,7 +372,7 @@ window.LAYOUT = (function () {
     const body = parseFloat(el.style.getPropertyValue('--body-h'));
     return {
       tabH: Math.max(28, 38 * s),
-      bodyH: body > 0 ? body : Math.max(152, 173 * s),
+      bodyH: body > 0 ? body : 2 * Math.max(6, 6 * s) + 3 * Math.max(22, 22 * s) + 2 * Math.max(5, 6 * s) + Math.max(6, 6 * s) + Math.max(28, 33 * s),
       statusH: statusHidden ? 0 : Math.max(26, 47 * s),
       limitRowH: Math.max(44, 52 * s)
     };
